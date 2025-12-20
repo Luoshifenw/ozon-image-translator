@@ -68,11 +68,12 @@ function App() {
 
       setStatus('processing');
 
-      // 发送请求
+      // 发送请求（设置 5 分钟超时）
       const response = await axios.post<TranslationResponse>('/api/translate-bulk', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        timeout: 300000, // 300秒 = 5分钟
       });
 
       const data = response.data;
