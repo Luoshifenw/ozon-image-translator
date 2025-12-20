@@ -1,6 +1,7 @@
 # FastAPI 核心
 fastapi==0.109.0
 uvicorn[standard]==0.27.0
+gunicorn==21.2.0
 
 # 异步 HTTP 客户端
 httpx==0.26.0
@@ -16,4 +17,7 @@ pydantic==2.5.3
 
 # 环境变量
 python-dotenv==1.0.0
+
+# 日志
+loguru==0.7.2
 
