@@ -23,6 +23,13 @@ from services.file_handler import (
     TEMP_ROOT,
 )
 from services.translation import get_translation_service, TranslationService
+from services.task_manager import (
+    TaskStatus,
+    save_task_status,
+    load_task_status,
+    delete_task_status,
+    ensure_task_status_dir
+)
 
 # #region agent log
 # Debug logging helper
@@ -319,5 +326,227 @@ async def download_file(file_path: str):
         path=full_path,
         filename=full_path.name,
         media_type="image/jpeg"
+    )
+
+
+# ============================================
+# 异步翻译接口（新增）
+# ============================================
+
+class AsyncTranslationSubmitResponse(BaseModel):
+    """异步翻译提交响应"""
+    task_id: str
+    status: str
+    message: str
+
+
+class TaskStatusResponse(BaseModel):
+    """任务状态响应"""
+    task_id: str
+    status: str  # pending, processing, completed, failed
+    total: int
+    processed: int
+    success: int
+    failed: int
+    images: List[TranslatedImage] = []
+    error: Optional[str] = None
+
+
+async def background_translate_task(
+    task_id: str,
+    saved_files: List[Path],
+    output_dir: Path
+):
+    """
+    后台翻译任务
+    
+    Args:
+        task_id: 任务ID
+        saved_files: 已保存的文件列表
+        output_dir: 输出目录
+    """
+    from config import settings
+    
+    try:
+        # 初始化任务状态
+        task_status = TaskStatus(
+            task_id=task_id,
+            status="processing",
+            total=len(saved_files),
+            processed=0,
+            success=0,
+            failed=0,
+            images=[]
+        )
+        await save_task_status(task_status)
+        
+        logger.info(f"[{task_id}] 后台翻译任务开始")
+        
+        # 获取翻译服务
+        translation_service = get_translation_service()
+        
+        # 为每个任务分配递增的延迟
+        tasks = [
+            process_single_image(
+                file_path,
+                output_dir,
+                translation_service,
+                delay=i * random.uniform(1.0, 2.0)
+            )
+            for i, file_path in enumerate(saved_files)
+        ]
+        
+        # 执行翻译
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # 构建结果
+        translated_images = []
+        success_count = 0
+        fail_count = 0
+        
+        for result, original_file in zip(results, saved_files):
+            if isinstance(result, Exception) or result is None:
+                fail_count += 1
+                error_msg = str(result) if isinstance(result, Exception) else "未知错误"
+                translated_images.append({
+                    "original_name": original_file.name,
+                    "translated_name": "",
+                    "file_path": "",
+                    "status": "failed",
+                    "error": error_msg
+                })
+            else:
+                success_count += 1
+                relative_path = f"{task_id}/output/{result.name}"
+                translated_images.append({
+                    "original_name": original_file.name,
+                    "translated_name": result.name,
+                    "file_path": relative_path,
+                    "status": "success"
+                })
+        
+        # 更新任务状态为完成
+        task_status.status = "completed"
+        task_status.processed = len(saved_files)
+        task_status.success = success_count
+        task_status.failed = fail_count
+        task_status.images = translated_images
+        await save_task_status(task_status)
+        
+        logger.info(f"[{task_id}] 后台翻译任务完成: 成功 {success_count}, 失败 {fail_count}")
+        
+        # 30分钟后清理
+        await asyncio.sleep(1800)
+        cleanup_temp_dir(task_id)
+        await delete_task_status(task_id)
+        
+    except Exception as e:
+        logger.error(f"[{task_id}] 后台翻译任务失败: {e}", exc_info=True)
+        # 更新任务状态为失败
+        task_status = TaskStatus(
+            task_id=task_id,
+            status="failed",
+            total=len(saved_files),
+            processed=0,
+            success=0,
+            failed=len(saved_files),
+            images=[],
+            error=str(e)
+        )
+        await save_task_status(task_status)
+
+
+@router.post("/translate-bulk-async", response_model=AsyncTranslationSubmitResponse)
+async def translate_bulk_async(
+    background_tasks: BackgroundTasks,
+    files: List[UploadFile] = File(..., description="要翻译的图片文件列表")
+):
+    """
+    批量翻译图片接口（异步版本）
+    
+    立即返回任务ID，翻译在后台进行
+    前端通过轮询 /api/task-status/{task_id} 获取进度
+    
+    - **files**: 图片文件列表 (支持 jpg, png, webp 等格式)
+    
+    返回: 任务ID和状态
+    """
+    # 确保任务状态目录存在
+    ensure_task_status_dir()
+    
+    # 生成任务ID
+    task_id = generate_request_id()
+    input_dir, output_dir = get_temp_dir(task_id)
+    
+    logger.info(f"[{task_id}] 接收异步翻译请求，共 {len(files)} 个文件")
+    
+    try:
+        # 保存上传的文件
+        saved_files = await save_all_upload_files(files, input_dir)
+        
+        if not saved_files:
+            logger.error(f"[{task_id}] 没有成功保存任何文件")
+            cleanup_temp_dir(task_id)
+            raise HTTPException(status_code=400, detail="没有有效的文件可处理")
+        
+        logger.info(f"[{task_id}] 已保存 {len(saved_files)} 个文件")
+        
+        # 初始化任务状态为 pending
+        initial_status = TaskStatus(
+            task_id=task_id,
+            status="pending",
+            total=len(saved_files),
+            processed=0,
+            success=0,
+            failed=0,
+            images=[]
+        )
+        await save_task_status(initial_status)
+        
+        # 将翻译任务添加到后台
+        background_tasks.add_task(background_translate_task, task_id, saved_files, output_dir)
+        
+        logger.info(f"[{task_id}] 翻译任务已提交到后台队列")
+        
+        return AsyncTranslationSubmitResponse(
+            task_id=task_id,
+            status="pending",
+            message=f"翻译任务已提交，共 {len(saved_files)} 个文件"
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[{task_id}] 提交翻译任务失败: {e}", exc_info=True)
+        cleanup_temp_dir(task_id)
+        raise HTTPException(status_code=500, detail=f"提交任务失败: {str(e)}")
+
+
+@router.get("/task-status/{task_id}", response_model=TaskStatusResponse)
+async def get_task_status(task_id: str):
+    """
+    查询任务状态
+    
+    - **task_id**: 任务ID
+    
+    返回: 任务状态和进度
+    """
+    status = await load_task_status(task_id)
+    
+    if not status:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    
+    # 转换为响应模型
+    images = [TranslatedImage(**img) for img in status.images]
+    
+    return TaskStatusResponse(
+        task_id=status.task_id,
+        status=status.status,
+        total=status.total,
+        processed=status.processed,
+        success=status.success,
+        failed=status.failed,
+        images=images,
+        error=status.error
     )
 
