@@ -94,7 +94,8 @@ class RealTranslationService(TranslationService):
     """
     
     def __init__(self, api_key: str, api_endpoint: str, prompt: str,
-                 poll_interval: float = 2.0, poll_max_attempts: int = 60):
+                 poll_interval: float = 2.0, poll_max_attempts: int = 60,
+                 storage_mode: str = "local", base_url: str = "http://localhost:8000"):
         """
         初始化真实翻译服务
         
@@ -104,12 +105,16 @@ class RealTranslationService(TranslationService):
             prompt: 翻译提示词
             poll_interval: 轮询间隔（秒）
             poll_max_attempts: 最大轮询次数
+            storage_mode: 存储模式 (local: Base64, cloud: URL)
+            base_url: 服务器公网地址（cloud 模式使用）
         """
         self.api_key = api_key
         self.api_endpoint = api_endpoint
         self.prompt = prompt
         self.poll_interval = poll_interval
         self.poll_max_attempts = poll_max_attempts
+        self.storage_mode = storage_mode
+        self.base_url = base_url
         
         # 创建 HTTP 客户端
         self.client = httpx.AsyncClient(
@@ -154,17 +159,32 @@ class RealTranslationService(TranslationService):
         # 在线程池中执行，避免阻塞主事件循环
         return await asyncio.to_thread(_sync_encode)
     
-    async def _submit_task(self, image_path: Path) -> str:
+    async def _submit_task(self, image_path: Path, request_id: str) -> str:
         """
         提交翻译任务
+        
+        Args:
+            image_path: 输入图片路径
+            request_id: 请求ID（用于构建 URL）
         
         Returns:
             task_id
         """
-        # 将图片转换为 base64 URL（异步执行）
         start_time = time.time()
-        image_url = await self._image_to_base64_url(image_path)
-        encode_time = time.time() - start_time
+        
+        # 根据存储模式决定使用 Base64 还是 URL
+        if self.storage_mode == "cloud":
+            # 云端模式：构建公网可访问的 URL
+            filename = image_path.name
+            image_url = f"{self.base_url}/api/temp-images/{request_id}/{filename}"
+            logger.info(f"使用 URL 模式: {image_url}")
+            prepare_time = time.time() - start_time
+            logger.info(f"URL 准备耗时: {prepare_time:.3f}秒")
+        else:
+            # 本地模式：使用 Base64 编码
+            image_url = await self._image_to_base64_url(image_path)
+            encode_time = time.time() - start_time
+            logger.info(f"Base64 编码耗时: {encode_time:.2f}秒")
         
         # 构建请求
         payload = {
@@ -177,7 +197,7 @@ class RealTranslationService(TranslationService):
         
         # 发送请求
         url = f"{self.api_endpoint}/v1/images/generations"
-        logger.info(f"提交翻译任务: {image_path.name} (编码耗时: {encode_time:.2f}秒)")
+        logger.info(f"提交翻译任务: {image_path.name} (模式: {self.storage_mode})")
         logger.info(f"Prompt: {self.prompt}")
         
         submit_start = time.time()
@@ -252,13 +272,16 @@ class RealTranslationService(TranslationService):
         翻译图片
         
         流程:
-        1. 将图片转换为 base64 并提交任务
+        1. 将图片转换为 base64/URL 并提交任务
         2. 轮询等待任务完成
         3. 下载翻译后的图片
         """
         try:
+            # 从路径提取 request_id (temp/request_id/input/filename)
+            request_id = input_path.parent.parent.name
+            
             # 1. 提交任务
-            task_id = await self._submit_task(input_path)
+            task_id = await self._submit_task(input_path, request_id)
             
             # 2. 轮询等待完成
             result = await self._poll_task_status(task_id)
@@ -325,7 +348,9 @@ def get_translation_service() -> TranslationService:
             api_endpoint=settings.APIMART_API_ENDPOINT,
             prompt=settings.TRANSLATION_PROMPT,
             poll_interval=settings.POLL_INTERVAL,
-            poll_max_attempts=settings.POLL_MAX_ATTEMPTS
+            poll_max_attempts=settings.POLL_MAX_ATTEMPTS,
+            storage_mode=settings.STORAGE_MODE,
+            base_url=settings.BASE_URL
         )
     
     return MockTranslationService()

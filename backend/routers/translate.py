@@ -8,7 +8,7 @@ import logging
 import random
 from pathlib import Path
 from typing import List
-from fastapi import APIRouter, UploadFile, File, BackgroundTasks
+from fastapi import APIRouter, UploadFile, File, BackgroundTasks, HTTPException
 from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel
 
@@ -202,6 +202,47 @@ async def translate_bulk(
         raise
 
 
+@router.get("/temp-images/{request_id}/{filename}")
+async def serve_temp_image(request_id: str, filename: str):
+    """
+    提供临时上传图片的公网访问（供 APIMart 在云端模式下下载）
+    
+    - **request_id**: 请求ID
+    - **filename**: 文件名
+    
+    返回: 原始上传的图片文件
+    
+    注意：此端点仅在云端部署时使用，本地开发使用 Base64
+    """
+    # 构建输入文件路径
+    file_path = TEMP_ROOT / request_id / "input" / filename
+    
+    # 安全检查：确保路径在 TEMP_ROOT 内
+    try:
+        file_path = file_path.resolve()
+        if not str(file_path).startswith(str(TEMP_ROOT.resolve())):
+            logger.warning(f"非法文件访问尝试: {request_id}/{filename}")
+            from fastapi import HTTPException
+            raise HTTPException(status_code=403, detail="非法文件路径")
+    except Exception as e:
+        from fastapi import HTTPException
+        logger.error(f"文件路径解析错误: {e}")
+        raise HTTPException(status_code=400, detail="文件路径错误")
+    
+    # 检查文件是否存在
+    if not file_path.exists() or not file_path.is_file():
+        logger.warning(f"文件不存在: {request_id}/{filename}")
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="文件不存在")
+    
+    # 返回文件（自动检测 MIME 类型）
+    return FileResponse(
+        path=file_path,
+        filename=filename,
+        media_type="image/*"
+    )
+
+
 @router.get("/download/{file_path:path}")
 async def download_file(file_path: str):
     """
@@ -219,14 +260,17 @@ async def download_file(file_path: str):
         full_path = full_path.resolve()
         if not str(full_path).startswith(str(TEMP_ROOT.resolve())):
             logger.warning(f"非法文件访问尝试: {file_path}")
-            return {"error": "非法文件路径"}
+            from fastapi import HTTPException
+            raise HTTPException(status_code=403, detail="非法文件路径")
     except Exception:
-        return {"error": "文件路径错误"}
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="文件路径错误")
     
     # 检查文件是否存在
     if not full_path.exists() or not full_path.is_file():
         logger.warning(f"文件不存在: {file_path}")
-        return {"error": "文件不存在"}
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="文件不存在")
     
     # 返回文件
     return FileResponse(
