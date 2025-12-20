@@ -13,10 +13,10 @@ interface TranslatedImage {
 interface TranslationResponse {
   task_id?: string;
   status: string;
-  total: int;
-  processed: int;
-  success: int;
-  failed: int;
+  total: number;
+  processed: number;
+  success: number;
+  failed: number;
   images: TranslatedImage[];
   error?: string;
 }
