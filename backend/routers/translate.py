@@ -6,6 +6,8 @@
 import asyncio
 import logging
 import random
+import json
+import time
 from pathlib import Path
 from typing import List
 from fastapi import APIRouter, UploadFile, File, BackgroundTasks, HTTPException
@@ -21,6 +23,25 @@ from services.file_handler import (
     TEMP_ROOT,
 )
 from services.translation import get_translation_service, TranslationService
+
+# #region agent log
+# Debug logging helper
+def log_debug(location, message, data=None, hypothesis_id=None):
+    """Write debug log to NDJSON file"""
+    try:
+        with open('/Users/dearjean/Desktop/CursorProject/ImageTranslator_v0.0.2/.cursor/debug.log', 'a') as f:
+            log_entry = {
+                'timestamp': int(time.time() * 1000),
+                'location': location,
+                'message': message,
+                'data': data or {},
+                'sessionId': 'debug-session',
+                'hypothesisId': hypothesis_id
+            }
+            f.write(json.dumps(log_entry) + '\n')
+    except:
+        pass
+# #endregion
 
 
 # 配置日志
@@ -116,9 +137,18 @@ async def translate_bulk(
     
     返回: 翻译结果列表 (包含文件路径，用于后续下载)
     """
+    # #region agent log
+    start_time = time.time()
+    log_debug('translate.py:140', 'Request received', {'file_count': len(files), 'start_time': start_time}, 'H4')
+    # #endregion
+    
     # 1. 生成唯一请求 ID 和临时目录
     request_id = generate_request_id()
     input_dir, output_dir = get_temp_dir(request_id)
+    
+    # #region agent log
+    log_debug('translate.py:148', 'Request ID generated', {'request_id': request_id, 'elapsed': time.time() - start_time}, 'H4')
+    # #endregion
     
     logger.info(f"[{request_id}] 开始处理批量翻译请求，共 {len(files)} 个文件")
     
@@ -182,6 +212,18 @@ async def translate_bulk(
                 ))
         
         logger.info(f"[{request_id}] 翻译完成: 成功 {success_count}, 失败 {fail_count}")
+        
+        # #region agent log
+        end_time = time.time()
+        total_elapsed = end_time - start_time
+        log_debug('translate.py:218', 'Translation completed', {
+            'request_id': request_id,
+            'total_elapsed': total_elapsed,
+            'success_count': success_count,
+            'fail_count': fail_count,
+            'about_to_return': True
+        }, 'H4')
+        # #endregion
         
         # 6. 注册后台清理任务（30分钟后清理，给用户时间下载）
         background_tasks.add_task(delayed_cleanup, request_id, 1800)
