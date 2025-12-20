@@ -5,12 +5,14 @@
 ### ✅ 已验证并修正的问题
 
 #### 1. API 端点 URL
+
 - **提交任务**: `POST /v1/images/generations` ✅ 正确
 - **查询任务**: `GET /v1/tasks/{task_id}` ✅ 已修正
   - ❌ 原错误: `/v1/images/tasks/{task_id}`
   - ✅ 正确路径: `/v1/tasks/{task_id}`
 
 #### 2. 响应数据结构
+
 根据官方文档，查询任务的响应格式为：
 
 ```json
@@ -33,6 +35,7 @@
 ```
 
 **关键字段**:
+
 - `status`: 任务状态 (pending, processing, completed, failed, cancelled)
 - `progress`: 完成百分比 (0-100)
 - `result.images`: 图片数组，包含 `url` 字段
@@ -64,28 +67,33 @@ image_url = images[0].get("url")
 ### 新增功能
 
 #### 1. 图片预览功能
+
 - 翻译完成后在网页上展示所有图片
 - 网格布局，响应式设计
 - 成功/失败状态清晰展示
 
 #### 2. 单独下载
+
 - 每张图片独立下载按钮
 - 支持批量下载全部成功的图片
 - 不再使用 ZIP 压缩包
 
 #### 3. 结果保留
+
 - 翻译结果保留 30 分钟
 - 给用户充足时间预览和下载
 
 ### API 变更
 
 #### 旧版本 (ZIP 下载)
+
 ```
 POST /api/translate-bulk
 响应: ZIP 文件流 (StreamingResponse)
 ```
 
 #### 新版本 (JSON 响应 + 预览)
+
 ```
 POST /api/translate-bulk
 响应: JSON 格式的图片信息列表
@@ -107,23 +115,23 @@ sequenceDiagram
 
     User->>Frontend: 上传图片
     Frontend->>Backend: POST /api/translate-bulk (FormData)
-    
+
     loop 每张图片
         Backend->>APIMart: POST /v1/images/generations (Base64)
         APIMart-->>Backend: task_id
-        
+
         loop 轮询直到完成
             Backend->>APIMart: GET /v1/tasks/{task_id}
             APIMart-->>Backend: status + progress
         end
-        
+
         APIMart-->>Backend: result.images[0].url
         Backend->>Backend: 下载图片到本地
     end
-    
+
     Backend-->>Frontend: JSON (图片信息列表)
     Frontend->>Frontend: 渲染预览网格
-    
+
     User->>Frontend: 点击下载
     Frontend->>Backend: GET /api/download/{file_path}
     Backend-->>Frontend: 图片文件
@@ -155,17 +163,19 @@ SERVICE_MODE=real
 
 修改 `TRANSLATION_PROMPT`:
 
-- **中文→英语**:
+- **中文 → 英语**:
+
   ```
   Please translate all text in this image from Chinese to English...
   ```
 
-- **中文→日语**:
+- **中文 → 日语**:
+
   ```
   Please translate all text in this image from Chinese to Japanese...
   ```
 
-- **俄语→英语**:
+- **俄语 → 英语**:
   ```
   Please translate all text in this image from Russian to English...
   ```
@@ -177,16 +187,18 @@ SERVICE_MODE=real
 ### 本地开发
 
 1. **配置 API Key**:
+
    ```bash
    cd backend
    nano .env  # 填入你的 APIMART_API_KEY
    ```
 
 2. **启动服务**:
+
    ```bash
    # 后端
    cd backend && python main.py
-   
+
    # 前端
    cd frontend && npm run dev
    ```
@@ -210,23 +222,27 @@ SERVICE_MODE=real
 ## 六、注意事项
 
 ### 1. 图片格式
+
 - 支持: JPG, PNG, WebP
 - 单张大小: ≤10MB
 - Base64 编码后上传
 
 ### 2. 并发限制
+
 - 官方说明：**无并发限制**
 - 本地配置：Semaphore(5) 控制本地并发
 - 可根据需要调整 `TRANSLATION_CONCURRENCY`
 
 ### 3. 超时设置
-- 轮询间隔: 2秒
-- 最大轮询次数: 60次 (共2分钟)
+
+- 轮询间隔: 2 秒
+- 最大轮询次数: 60 次 (共 2 分钟)
 - 超时后任务标记为失败
 
 ### 4. 图片链接有效期
-- APIMart CDN 图片链接 **24小时** 有效
-- 本地存储保留 **30分钟**
+
+- APIMart CDN 图片链接 **24 小时** 有效
+- 本地存储保留 **30 分钟**
 - 请及时下载
 
 ---
@@ -236,6 +252,7 @@ SERVICE_MODE=real
 ### 问题 1: API 调用失败
 
 **检查清单**:
+
 1. API Key 是否正确填入 `.env`
 2. 网络是否能访问 `api.apimart.ai`
 3. 查看后端日志错误信息
@@ -243,6 +260,7 @@ SERVICE_MODE=real
 ### 问题 2: 任务一直处理中
 
 **可能原因**:
+
 1. API 端点 URL 错误 (已修正)
 2. 响应数据解析错误 (已修正)
 3. 图片过大导致处理慢
@@ -250,6 +268,7 @@ SERVICE_MODE=real
 ### 问题 3: 图片下载失败
 
 **检查**:
+
 1. 文件路径是否正确
 2. 临时文件是否被过早清理
 3. 浏览器下载权限
@@ -259,14 +278,17 @@ SERVICE_MODE=real
 ## 八、后续优化建议
 
 1. **实时进度反馈**
+
    - 使用 SSE/WebSocket 推送每张图片的处理进度
    - 显示 `progress` 字段 (0-100%)
 
 2. **错误重试机制**
+
    - API 调用失败自动重试
    - 指数退避策略
 
 3. **批量任务队列**
+
    - 支持超大批量 (100+ 张)
    - 后台任务队列处理
 
@@ -282,4 +304,3 @@ SERVICE_MODE=real
 - [任务查询 API 文档](https://docs.apimart.ai/en/api-reference/task-management/get-task-status)
 - 项目 README: `README.md`
 - 进度文档: `PROGRESS.md`
-
