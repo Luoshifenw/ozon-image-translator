@@ -26,9 +26,14 @@ type Status = "idle" | "uploading" | "processing" | "completed" | "error";
 function App() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [status, setStatus] = useState<Status>("idle");
-  const [translatedImages, setTranslatedImages] = useState<TranslatedImage[]>([]);
+  const [translatedImages, setTranslatedImages] = useState<TranslatedImage[]>(
+    []
+  );
   const [errorMessage, setErrorMessage] = useState<string>("");
-  const [progress, setProgress] = useState<{ processed: number; total: number }>({
+  const [progress, setProgress] = useState<{
+    processed: number;
+    total: number;
+  }>({
     processed: 0,
     total: 0,
   });
@@ -67,29 +72,29 @@ function App() {
       });
 
       // 提交翻译任务（立即返回任务ID）
-      const submitResponse = await axios.post<{ task_id: string; status: string; message: string }>(
-        "/api/translate-bulk-async",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-          timeout: 30000,
-        }
-      );
+      const submitResponse = await axios.post<{
+        task_id: string;
+        status: string;
+        message: string;
+      }>("/api/translate-bulk-async", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+        timeout: 30000,
+      });
 
       const taskId = submitResponse.data.task_id;
       console.log(`任务已提交: ${taskId}`);
-      
+
       setStatus("processing");
 
       // 开始轮询任务状态
       let pollCount = 0;
       const maxPolls = 200; // 最多轮询 200 次 (10 分钟)
-      
+
       const pollInterval = setInterval(async () => {
         pollCount++;
-        
+
         if (pollCount > maxPolls) {
           clearInterval(pollInterval);
           setStatus("error");
@@ -103,7 +108,9 @@ function App() {
           );
 
           const data = statusResponse.data;
-          console.log(`任务状态: ${data.status}, 进度: ${data.processed}/${data.total}`);
+          console.log(
+            `任务状态: ${data.status}, 进度: ${data.processed}/${data.total}`
+          );
 
           // 更新进度
           setProgress({ processed: data.processed, total: data.total });
@@ -125,7 +132,6 @@ function App() {
           // 不停止轮询，继续尝试
         }
       }, 3000); // 每 3 秒轮询一次
-
     } catch (error) {
       console.error("提交翻译任务失败:", error);
       setStatus("error");
@@ -214,7 +220,10 @@ function App() {
         {/* 上传区域 */}
         {!hasResults && (
           <>
-            <UploadZone onFilesSelected={handleFilesSelected} disabled={isProcessing} />
+            <UploadZone
+              onFilesSelected={handleFilesSelected}
+              disabled={isProcessing}
+            />
 
             {/* 已选择文件列表 */}
             {selectedFiles.length > 0 && (
@@ -253,7 +262,9 @@ function App() {
                             d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
                           />
                         </svg>
-                        <span className="text-slate-300 truncate">{file.name}</span>
+                        <span className="text-slate-300 truncate">
+                          {file.name}
+                        </span>
                       </div>
                       <span className="text-slate-500 text-sm ml-2 flex-shrink-0">
                         {formatFileSize(file.size)}
@@ -357,7 +368,9 @@ function App() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className={`px-4 py-2 rounded-lg ${currentStatus.bg}`}>
-                  <span className={`text-sm font-medium ${currentStatus.color}`}>
+                  <span
+                    className={`text-sm font-medium ${currentStatus.color}`}
+                  >
                     {currentStatus.text}
                   </span>
                 </div>
@@ -405,4 +418,3 @@ function App() {
 }
 
 export default App;
-
