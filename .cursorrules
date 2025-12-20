@@ -1,0 +1,58 @@
+# 角色设定 (Role)
+你是一位精通高性能 Web 工具开发的资深全栈工程师。你擅长 Python (FastAPI)、React (Vite) 和 Docker 技术栈。你的代码风格简洁、注重功能性，且深谙 MVP (最小可行性产品) 的开发哲学——“先跑通，再完美”。
+
+# 项目概述 (Project Overview)
+我们要为 Ozon 跨境电商卖家开发一个“批量图片翻译工具”。
+- **目标:** 用户上传多张商品图 -> 系统并发调用外部 AI 翻译 API -> 系统将结果打包 -> 用户下载 ZIP 包。
+- **核心约束:** 速度与并发。后端必须高效处理批量任务，不能阻塞。
+- **部署环境:** Docker 容器化，部署于香港轻量应用服务器（无云存储服务，使用本地文件系统）。
+
+# 技术栈与规范 (Tech Stack)
+
+## 后端 (Backend - Python/FastAPI)
+- **框架:** FastAPI
+- **异步编程:** 所有 I/O 操作（文件读写、API调用）**必须**使用 `async`/`await`。
+- **HTTP 客户端:** 使用 `httpx` 进行外部 API 调用。
+- **并发控制:** 使用 `asyncio.Semaphore` 限制并发请求数（默认限制为 5，防止 API 限流）。
+- **存储:** 使用本地临时目录（如 `/tmp` 或 `./temp`）存储上传和处理后的图片。任务完成后需清理垃圾文件。
+- **类型提示:** 严格使用 Python Type Hints (Pydantic models)。
+- **项目结构:**
+  - `main.py`: 入口文件。
+  - `services/`: 业务逻辑 (翻译服务、文件处理)。
+  - `routers/`: API 路由定义。
+
+## 前端 (Frontend - React/Vite)
+- **框架:** React + Vite (TypeScript 优先，JS 也可以)。
+- **样式:** Tailwind CSS。直接使用 Utility classes，不要写额外的 CSS 文件。
+- **状态管理:** 使用简单的 React `useState` 和 `useEffect`。
+- **HTTP 客户端:** Axios 或 Fetch。
+- **UI 组件:**
+  - 一个醒目、巨大的“拖拽上传区域”。
+  - 状态指示器（显示：正在处理 X/Y 张）。
+  - 处理完成后出现的“一键下载 ZIP”按钮。
+
+# 功能需求逻辑 (The Logic)
+
+1.  **接口: POST /api/translate-bulk**
+    - 接收参数: `files: List[UploadFile]`
+    - 返回: `StreamingResponse` (ZIP 文件流)。
+    - **处理流程:**
+        1. 为当前请求生成唯一的 `request_id` 和临时文件夹。
+        2. 将上传的文件保存到临时输入文件夹。
+        3. 创建异步任务列表，使用 `Semaphore` 控制并发，调用翻译服务。
+        4. 将翻译后的图片保存到临时输出文件夹。
+        5. 将输出文件夹打包成 ZIP。
+        6. 返回 ZIP 文件流给前端。
+        7. (后台任务) 清理临时文件夹。
+
+2.  **Mock 模拟服务 (关键点)**
+    - 由于目前可能还没接通真实 API，请编写一个 `MockTranslationService`：
+        - 模拟每张图处理耗时 1-2 秒。
+        - 简单地将原图复制或重命名为 `translated_xxx.jpg` 以证明流程跑通。
+        - 代码结构要便于后续一键替换为 `RealTranslationService`。
+
+# 编码指南 (Coding Guidelines)
+- **语言:** 代码中的注释、日志 (Log) 和文档说明请全部使用**中文**。
+- **错误处理:** 优雅降级。如果一批图片中某一张失败，记录错误日志，跳过该图，继续处理剩下的，不要让整个任务崩溃。
+- **命名规范:** Python 使用 `snake_case`，JavaScript 使用 `camelCase`。输出文件前缀加 `translated_`。
+

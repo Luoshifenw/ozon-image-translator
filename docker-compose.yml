@@ -1,0 +1,43 @@
+# Docker Compose 配置
+# 编排前后端服务
+
+version: '3.8'
+
+services:
+  # 后端服务
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: image-translator-backend
+    restart: unless-stopped
+    volumes:
+      # 挂载临时目录到宿主机（可选，用于调试）
+      - ./temp:/app/temp
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 前端服务
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: image-translator-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+# 网络配置
+networks:
+  default:
+    name: image-translator-network
+
