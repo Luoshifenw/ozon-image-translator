@@ -9,7 +9,7 @@ import random
 import json
 import time
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, UploadFile, File, BackgroundTasks, HTTPException
 from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel
