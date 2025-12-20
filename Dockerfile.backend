@@ -26,6 +26,6 @@ RUN mkdir -p /app/temp
 # 暴露端口
 EXPOSE 8000
 
-# 启动命令（使用 Gunicorn + Uvicorn worker，设置 5 分钟超时）
-CMD ["gunicorn", "main:app", "--bind", "0.0.0.0:8000", "--worker-class", "uvicorn.workers.UvicornWorker", "--workers", "1", "--timeout", "300"]
+# 启动命令（使用 Gunicorn 配置文件）
+CMD ["gunicorn", "-c", "gunicorn.conf.py", "main:app"]
 
