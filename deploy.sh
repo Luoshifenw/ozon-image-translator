@@ -200,3 +200,4 @@ echo -e "  重启服务: ${SSH_CMD} 'cd ${APP_DIR} && docker-compose restart'"
 echo -e "  停止服务: ${SSH_CMD} 'cd ${APP_DIR} && docker-compose down'"
 echo ""
 
+

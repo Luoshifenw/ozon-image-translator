@@ -16,3 +16,4 @@ echo ""
 echo "===== 检查 Docker Compose 网络配置 ====="
 docker network inspect image-translator-network | grep -A 5 "com.docker.network"
 
+
