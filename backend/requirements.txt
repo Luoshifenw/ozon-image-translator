@@ -23,3 +23,6 @@ Pillow==10.3.0
 # WSGI/ASGI 服务器
 gunicorn==21.2.0
 
+# 日志
+loguru==0.7.2
+
