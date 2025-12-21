@@ -11,8 +11,9 @@ import logging
 import time
 from abc import ABC, abstractmethod
 from pathlib import Path
-
+from typing import Tuple
 import httpx
+from PIL import Image
 
 # 配置日志
 logger = logging.getLogger(__name__)
@@ -93,6 +94,19 @@ class RealTranslationService(TranslationService):
     文档: https://docs.apimart.ai/en/api-reference/images/gpt-4o/generation
     """
     
+    # 常用宽高比列表（宽, 高）
+    COMMON_RATIOS: Tuple[Tuple[int, int], ...] = (
+        (1, 1),
+        (4, 3),
+        (3, 4),
+        (16, 9),
+        (9, 16),
+        (3, 2),
+        (2, 3),
+        (5, 4),
+        (4, 5),
+    )
+    
     def __init__(self, api_key: str, api_endpoint: str, prompt: str,
                  poll_interval: float = 2.0, poll_max_attempts: int = 60,
                  storage_mode: str = "local", base_url: str = "http://localhost:8000"):
@@ -159,6 +173,42 @@ class RealTranslationService(TranslationService):
         # 在线程池中执行，避免阻塞主事件循环
         return await asyncio.to_thread(_sync_encode)
     
+    async def _get_nearest_size(self, image_path: Path) -> str:
+        """
+        计算与原图最接近的常用宽高比，返回形如 "4:3" 的字符串
+        """
+        def _compute() -> str:
+            try:
+                with Image.open(image_path) as img:
+                    width, height = img.size
+            except Exception as e:
+                logger.warning(f"读取图片尺寸失败，使用默认 1:1: {e}")
+                return "1:1"
+            
+            if width <= 0 or height <= 0:
+                logger.warning("图片尺寸异常，使用默认 1:1")
+                return "1:1"
+            
+            aspect = width / height
+            best_ratio = "1:1"
+            best_diff = float("inf")
+            best_pair = (1, 1)
+            
+            for w, h in self.COMMON_RATIOS:
+                diff = abs(aspect - (w / h))
+                if diff < best_diff:
+                    best_diff = diff
+                    best_ratio = f"{w}:{h}"
+                    best_pair = (w, h)
+            
+            logger.info(
+                f"原图尺寸 {width}x{height}, 实际比例 {aspect:.4f}, "
+                f"匹配比例 {best_ratio} (参考 {best_pair[0]}:{best_pair[1]})"
+            )
+            return best_ratio
+        
+        return await asyncio.to_thread(_compute)
+    
     async def _submit_task(self, image_path: Path, request_id: str) -> str:
         """
         提交翻译任务
@@ -186,11 +236,14 @@ class RealTranslationService(TranslationService):
             encode_time = time.time() - start_time
             logger.info(f"Base64 编码耗时: {encode_time:.2f}秒")
         
+        # 计算与原图最接近的常用比例，避免强制 1:1 造成拉伸
+        size_ratio = await self._get_nearest_size(image_path)
+        
         # 构建请求
         payload = {
             "model": "gpt-4o-image",
             "prompt": self.prompt,
-            "size": "1:1",
+            "size": size_ratio,
             "n": 1,
             "image_urls": [image_url]
         }
