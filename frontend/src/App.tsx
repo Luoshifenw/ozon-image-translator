@@ -26,9 +26,7 @@ type Status = "idle" | "uploading" | "processing" | "completed" | "error";
 function App() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [status, setStatus] = useState<Status>("idle");
-  const [translatedImages, setTranslatedImages] = useState<TranslatedImage[]>(
-    []
-  );
+  const [translatedImages, setTranslatedImages] = useState<TranslatedImage[]>([]);
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [progress, setProgress] = useState<{
     processed: number;
@@ -37,6 +35,9 @@ function App() {
     processed: 0,
     total: 0,
   });
+
+  // 翻译模式状态
+  const [targetMode, setTargetMode] = useState<"original" | "ozon_3_4">("original");
 
   // 文件选择处理
   const handleFilesSelected = useCallback((files: File[]) => {
@@ -70,6 +71,8 @@ function App() {
       selectedFiles.forEach((file) => {
         formData.append("files", file);
       });
+      // 添加目标模式
+      formData.append("target_mode", targetMode);
 
       // 提交翻译任务（立即返回任务ID）
       const submitResponse = await axios.post<{
@@ -84,7 +87,7 @@ function App() {
       });
 
       const taskId = submitResponse.data.task_id;
-      console.log(`任务已提交: ${taskId}`);
+      console.log(`任务已提交: ${taskId}, 模式: ${targetMode}`);
 
       setStatus("processing");
 
@@ -141,7 +144,7 @@ function App() {
         setErrorMessage("提交任务失败，请检查网络连接或稍后重试");
       }
     }
-  }, [selectedFiles]);
+  }, [selectedFiles, targetMode]);
 
   // 下载单张图片
   const handleDownloadImage = useCallback((image: TranslatedImage) => {
@@ -396,13 +399,38 @@ function App() {
                   </div>
                 )}
               </div>
+
               {status === "idle" && (
-                <button
-                  onClick={handleStartTranslation}
-                  className="px-8 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold hover:from-emerald-400 hover:to-cyan-400 transition-all shadow-lg shadow-emerald-500/20"
-                >
-                  开始翻译
-                </button>
+                <div className="flex items-center gap-4">
+                  {/* 模式选择器 */}
+                  <div className="flex items-center gap-2 bg-slate-900/50 rounded-xl p-1 border border-slate-700/50">
+                    <button
+                      onClick={() => setTargetMode("original")}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${targetMode === "original"
+                          ? "bg-slate-700 text-white shadow-sm"
+                          : "text-slate-400 hover:text-slate-200"
+                        }`}
+                    >
+                      保持原比例
+                    </button>
+                    <button
+                      onClick={() => setTargetMode("ozon_3_4")}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${targetMode === "ozon_3_4"
+                          ? "bg-blue-600 text-white shadow-sm"
+                          : "text-slate-400 hover:text-slate-200"
+                        }`}
+                    >
+                      Ozon主图 (3:4)
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={handleStartTranslation}
+                    className="px-8 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold hover:from-emerald-400 hover:to-cyan-400 transition-all shadow-lg shadow-emerald-500/20"
+                  >
+                    开始翻译
+                  </button>
+                </div>
               )}
             </div>
 

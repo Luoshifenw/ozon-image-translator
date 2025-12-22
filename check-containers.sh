@@ -18,3 +18,6 @@ echo "===== 检查最近的容器日志 ====="
 docker-compose logs --tail=10 frontend
 
 
+
+
+

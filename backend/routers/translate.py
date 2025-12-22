@@ -10,7 +10,7 @@ import json
 import time
 from pathlib import Path
 from typing import List, Optional
-from fastapi import APIRouter, UploadFile, File, BackgroundTasks, HTTPException
+from fastapi import APIRouter, UploadFile, File, BackgroundTasks, HTTPException, Form
 from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel
 
@@ -92,8 +92,8 @@ logger = logging.getLogger(__name__)
 # 创建路由器
 router = APIRouter(prefix="/api", tags=["翻译"])
 
-# 并发控制：最多同时处理 5 个翻译任务
-MAX_CONCURRENT_TASKS = 5
+# 并发控制：最多同时处理 20 个翻译任务
+MAX_CONCURRENT_TASKS = 20
 semaphore = asyncio.Semaphore(MAX_CONCURRENT_TASKS)
 
 
@@ -101,7 +101,8 @@ async def process_single_image(
     input_path: Path,
     output_dir: Path,
     service: TranslationService,
-    delay: float = 0.0
+    delay: float = 0.0,
+    target_mode: str = "original"
 ) -> Path | None:
     """
     处理单张图片（受信号量控制 + 错峰延迟）
@@ -111,6 +112,7 @@ async def process_single_image(
         output_dir: 输出目录
         service: 翻译服务实例
         delay: 启动延迟（秒），用于错峰发送
+        target_mode: 输出模式
         
     Returns:
         成功返回输出路径，失败返回 None
@@ -122,18 +124,19 @@ async def process_single_image(
     
     async with semaphore:
         try:
-            result = await service.translate(input_path, output_dir)
+            result = await service.translate(input_path, output_dir, target_mode=target_mode)
             return result
         except Exception as e:
             logger.error(f"翻译失败 {input_path.name}: {e}", exc_info=True)
-            # 返回 None 表示失败，但不中断其他任务
-            return None
+            # 返回 Exception 以便上层获取错误信息
+            return e
 
 
 @router.post("/translate-bulk", response_model=TranslationResponse)
 async def translate_bulk(
     background_tasks: BackgroundTasks,
-    files: List[UploadFile] = File(..., description="要翻译的图片文件列表")
+    files: List[UploadFile] = File(..., description="要翻译的图片文件列表"),
+    target_mode: str = Form("original", description="输出模式：original 或 ozon_3_4")
 ):
     """
     批量翻译图片接口
@@ -179,7 +182,8 @@ async def translate_bulk(
                 file_path, 
                 output_dir, 
                 translation_service,
-                delay=i * random.uniform(1.0, 2.0)  # 每个任务延迟递增
+                delay=i * random.uniform(1.0, 2.0),  # 每个任务延迟递增
+                target_mode=target_mode
             )
             for i, file_path in enumerate(saved_files)
         ]
@@ -355,7 +359,8 @@ class TaskStatusResponse(BaseModel):
 async def background_translate_task(
     task_id: str,
     saved_files: List[Path],
-    output_dir: Path
+    output_dir: Path,
+    target_mode: str = "original"
 ):
     """
     后台翻译任务
@@ -364,6 +369,7 @@ async def background_translate_task(
         task_id: 任务ID
         saved_files: 已保存的文件列表
         output_dir: 输出目录
+        target_mode: 输出模式
     """
     from config import settings
     
@@ -391,7 +397,8 @@ async def background_translate_task(
                 file_path,
                 output_dir,
                 translation_service,
-                delay=i * random.uniform(1.0, 2.0)
+                delay=i * random.uniform(1.0, 2.0),
+                target_mode=target_mode
             )
             for i, file_path in enumerate(saved_files)
         ]
@@ -459,7 +466,8 @@ async def background_translate_task(
 @router.post("/translate-bulk-async", response_model=AsyncTranslationSubmitResponse)
 async def translate_bulk_async(
     background_tasks: BackgroundTasks,
-    files: List[UploadFile] = File(..., description="要翻译的图片文件列表")
+    files: List[UploadFile] = File(..., description="要翻译的图片文件列表"),
+    target_mode: str = Form("original", description="输出模式")
 ):
     """
     批量翻译图片接口（异步版本）
@@ -504,7 +512,7 @@ async def translate_bulk_async(
         await save_task_status(initial_status)
         
         # 将翻译任务添加到后台
-        background_tasks.add_task(background_translate_task, task_id, saved_files, output_dir)
+        background_tasks.add_task(background_translate_task, task_id, saved_files, output_dir, target_mode)
         
         logger.info(f"[{task_id}] 翻译任务已提交到后台队列")
         

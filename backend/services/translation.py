@@ -94,18 +94,13 @@ class RealTranslationService(TranslationService):
     文档: https://docs.apimart.ai/en/api-reference/images/gpt-4o/generation
     """
     
-    # 常用宽高比列表（宽, 高）
-    COMMON_RATIOS: Tuple[Tuple[int, int], ...] = (
-        (1, 1),
-        (4, 3),
-        (3, 4),
-        (16, 9),
-        (9, 16),
-        (3, 2),
-        (2, 3),
-        (5, 4),
-        (4, 5),
-    )
+    # API 支持的宽高比 (宽:高)
+    # 文档: https://docs.apimart.ai/en/api-reference/images/gpt-4o/generation
+    SUPPORTED_RATIOS = {
+        "1:1": 1.0,
+        "2:3": 2/3,
+        "3:2": 3/2,
+    }
     
     def __init__(self, api_key: str, api_endpoint: str, prompt: str,
                  poll_interval: float = 2.0, poll_max_attempts: int = 60,
@@ -132,13 +127,36 @@ class RealTranslationService(TranslationService):
         
         # 创建 HTTP 客户端
         self.client = httpx.AsyncClient(
-            timeout=httpx.Timeout(30.0, connect=10.0),
+            timeout=httpx.Timeout(180.0, connect=60.0),
             headers={
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json"
             }
         )
         logger.info("RealTranslationService 已初始化")
+    
+    async def _request_with_retry(self, method: str, url: str, **kwargs) -> httpx.Response:
+        """
+        带重试机制的通用请求方法
+        防止因网络波动导致的 RemoteProtocolError 或 Timeout
+        """
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                # 每次请求前短暂延迟，避免过于频繁
+                if attempt > 0:
+                    await asyncio.sleep(1)
+                
+                response = await self.client.request(method, url, **kwargs)
+                return response
+            except (httpx.RequestError, httpx.TimeoutException) as e:
+                if attempt == max_retries - 1:
+                    logger.error(f"请求失败 (重试{max_retries}次): {method} {url} - {e}")
+                    raise e
+                logger.warning(f"请求异常，正在重试 ({attempt+1}/{max_retries}): {method} {url} - {e}")
+        
+        # 理论上不会走到这里
+        raise httpx.RequestError("未知请求错误")
     
     async def _image_to_base64_url(self, image_path: Path) -> str:
         """
@@ -171,43 +189,124 @@ class RealTranslationService(TranslationService):
             return f"data:{mime_type};base64,{base64_data}"
         
         # 在线程池中执行，避免阻塞主事件循环
-        return await asyncio.to_thread(_sync_encode)
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, _sync_encode)
     
-    async def _get_nearest_size(self, image_path: Path) -> str:
+    async def _pad_image_to_ratio(self, image_path: Path, target_ratio_str: str) -> Path:
         """
-        计算与原图最接近的常用宽高比，返回形如 "4:3" 的字符串
+        将图片填充到指定的宽高比（加白边）
+        """
+        def _process():
+            with Image.open(image_path) as img:
+                # 转换由 RGBA 为 RGB（如果是 PNG），避免白色背景变黑
+                if img.mode == 'RGBA':
+                    background = Image.new('RGB', img.size, (255, 255, 255))
+                    background.paste(img, mask=img.split()[3])
+                    img = background
+                elif img.mode != 'RGB':
+                    img = img.convert('RGB')
+                
+                width, height = img.size
+                target_ratio = self.SUPPORTED_RATIOS[target_ratio_str]
+                
+                # 计算目标尺寸
+                # 如果当前比例 > 目标比例（比如 16:9 > 1:1），说明太宽，需要补高
+                # 如果当前比例 < 目标比例（比如 3:4 < 1:1），说明太高，需要补宽
+                current_ratio = width / height
+                
+                if current_ratio > target_ratio:
+                    # 图片太宽，保持宽度，增加高度
+                    new_width = width
+                    new_height = int(width / target_ratio)
+                else:
+                    # 图片太高，保持高度，增加宽度
+                    new_height = height
+                    new_width = int(height * target_ratio)
+                
+                # 创建白色背景新图
+                new_img = Image.new('RGB', (new_width, new_height), (255, 255, 255))
+                
+                # 将原图居中粘贴
+                x_offset = (new_width - width) // 2
+                y_offset = (new_height - height) // 2
+                new_img.paste(img, (x_offset, y_offset))
+                
+                # 保存处理后的图片
+                # 使用 padded_ 前缀，保存到同一目录
+                output_path = image_path.parent / f"padded_{image_path.name}"
+                new_img.save(output_path, quality=95)
+                return output_path
+
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, _process)
+
+    async def _stretch_to_3_4(self, image_path: Path) -> Path:
+        """
+        [NEW] 将图片强制拉伸/压缩到 3:4 比例
+        用于 Ozon 主图模式
+        """
+        def _process():
+            with Image.open(image_path) as img:
+                if img.mode == 'RGBA':
+                    img = img.convert('RGB')
+                
+                width, height = img.size
+                
+                # 目标：3:4 (0.75)
+                # 策略：保持高度，计算新宽度 (变瘦/变胖)
+                # 逻辑：New Width = Height * 0.75
+                target_height = height
+                target_width = int(height * 0.75)
+                
+                # 强制 resize
+                new_img = img.resize((target_width, target_height), Image.Resampling.LANCZOS)
+                
+                output_path = image_path.parent / f"stretched_3_4_{image_path.name}"
+                new_img.save(output_path, quality=95)
+                return output_path
+
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, _process)
+
+    async def _get_best_fit_ratio(self, image_path: Path) -> str:
+        """
+        计算最适合的 API 支持比例 (1:1, 2:3, 3:2)
+        选择逻辑：填充面积最小的比例
         """
         def _compute() -> str:
             try:
                 with Image.open(image_path) as img:
                     width, height = img.size
-            except Exception as e:
-                logger.warning(f"读取图片尺寸失败，使用默认 1:1: {e}")
-                return "1:1"
-            
-            if width <= 0 or height <= 0:
-                logger.warning("图片尺寸异常，使用默认 1:1")
+            except Exception:
                 return "1:1"
             
             aspect = width / height
+            
             best_ratio = "1:1"
-            best_diff = float("inf")
-            best_pair = (1, 1)
+            min_padding_area = float("inf")
             
-            for w, h in self.COMMON_RATIOS:
-                diff = abs(aspect - (w / h))
-                if diff < best_diff:
-                    best_diff = diff
-                    best_ratio = f"{w}:{h}"
-                    best_pair = (w, h)
+            for ratio_str, ratio_val in self.SUPPORTED_RATIOS.items():
+                # 计算如果要适应这个比例，需要填充多少面积
+                if aspect > ratio_val:
+                    # 原图更宽，由于宽度固定，需要增加高度
+                    # new_height = width / ratio_val
+                    # padding_area = width * (new_height - height)
+                    padding_area = width * (width / ratio_val - height)
+                else:
+                    # 原图更高，由于高度固定，需要增加宽度
+                    # new_width = height * ratio_val
+                    # padding_area = height * (new_width - width)
+                    padding_area = height * (height * ratio_val - width)
+                
+                if padding_area < min_padding_area:
+                    min_padding_area = padding_area
+                    best_ratio = ratio_str
             
-            logger.info(
-                f"原图尺寸 {width}x{height}, 实际比例 {aspect:.4f}, "
-                f"匹配比例 {best_ratio} (参考 {best_pair[0]}:{best_pair[1]})"
-            )
+            logger.info(f"原图 {width}x{height} ({aspect:.2f}) -> 最佳适配 {best_ratio}")
             return best_ratio
         
-        return await asyncio.to_thread(_compute)
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, _compute)
     
     async def _submit_task(self, image_path: Path, request_id: str) -> str:
         """
@@ -222,22 +321,35 @@ class RealTranslationService(TranslationService):
         """
         start_time = time.time()
         
+        # 1. 计算最佳适配比例
+        size_ratio = await self._get_best_fit_ratio(image_path)
+        
+        # 2. 预处理图片：填充白边以完全匹配比例
+        # 这一步是关键，确保提交给 API 的图片已经是标准比例，防止 API 自动裁剪
+        try:
+            processed_image_path = await self._pad_image_to_ratio(image_path, size_ratio)
+            logger.info(f"图片已预处理(填充白边): {processed_image_path.name}, 目标比例: {size_ratio}")
+            
+            # 使用处理后的图片进行 Base64 / URL 生成
+            # 注意：如果是 Cloud 模式，我们需要确保 processed_image_path 也是可访问的
+            # 目前 Cloud 模式使用的是 input 目录下的文件，所以我们需要把 padded 图片放入正确的临时目录结构中
+            # 但 _pad_image_to_ratio 默认保存在同级目录，所以通常没问题
+            target_image_path = processed_image_path
+            
+        except Exception as e:
+            logger.error(f"图片预处理失败，将尝试使用原图: {e}")
+            target_image_path = image_path
+        
         # 根据存储模式决定使用 Base64 还是 URL
         if self.storage_mode == "cloud":
-            # 云端模式：构建公网可访问的 URL
-            filename = image_path.name
+            # 云端模式
+            # 注意：padded_xxx 必须也能被 serve_temp_image 路由访问到
+            filename = target_image_path.name
             image_url = f"{self.base_url}/api/temp-images/{request_id}/{filename}"
             logger.info(f"使用 URL 模式: {image_url}")
-            prepare_time = time.time() - start_time
-            logger.info(f"URL 准备耗时: {prepare_time:.3f}秒")
         else:
-            # 本地模式：使用 Base64 编码
-            image_url = await self._image_to_base64_url(image_path)
-            encode_time = time.time() - start_time
-            logger.info(f"Base64 编码耗时: {encode_time:.2f}秒")
-        
-        # 计算与原图最接近的常用比例，避免强制 1:1 造成拉伸
-        size_ratio = await self._get_nearest_size(image_path)
+            # 本地模式
+            image_url = await self._image_to_base64_url(target_image_path)
         
         # 构建请求
         payload = {
@@ -254,7 +366,9 @@ class RealTranslationService(TranslationService):
         logger.info(f"Prompt: {self.prompt}")
         
         submit_start = time.time()
-        response = await self.client.post(url, json=payload)
+        # response = await self.client.post(url, json=payload)
+        # 改用带重试的请求
+        response = await self._request_with_retry("POST", url, json=payload)
         submit_time = time.time() - submit_start
         response.raise_for_status()
         
@@ -283,7 +397,9 @@ class RealTranslationService(TranslationService):
         for attempt in range(self.poll_max_attempts):
             await asyncio.sleep(self.poll_interval)
             
-            response = await self.client.get(url)
+            # response = await self.client.get(url)
+            # 改用带重试的请求
+            response = await self._request_with_retry("GET", url)
             response.raise_for_status()
             
             result = response.json()
@@ -320,43 +436,49 @@ class RealTranslationService(TranslationService):
         logger.info(f"图片已下载: {output_path}")
         return output_path
     
-    async def translate(self, input_path: Path, output_dir: Path) -> Path:
+    async def translate(self, input_path: Path, output_dir: Path, target_mode: str = "original") -> Path:
         """
         翻译图片
         
-        流程:
-        1. 将图片转换为 base64/URL 并提交任务
-        2. 轮询等待任务完成
-        3. 下载翻译后的图片
+        Args:
+            input_path: 输入图片路径
+            output_dir: 输出目录
+            target_mode: 输出模式 "original" | "ozon_3_4"
         """
         try:
+            # 准备工作图片（默认是原图）
+            working_image_path = input_path
+            
+            # 1. 模式预处理
+            if target_mode == "ozon_3_4":
+                # Ozon 主图模式：强制拉伸到 3:4
+                try:
+                    working_image_path = await self._stretch_to_3_4(input_path)
+                    logger.info(f"Ozon 3:4 模式：图片已拉伸 -> {working_image_path.name}")
+                except Exception as e:
+                    logger.error(f"拉伸图片失败: {e}，将使用原图继续")
+            
             # 从路径提取 request_id (temp/request_id/input/filename)
             request_id = input_path.parent.parent.name
             
-            # 1. 提交任务
-            task_id = await self._submit_task(input_path, request_id)
+            # 2. 提交任务 (使用 working_image_path)
+            task_id = await self._submit_task(working_image_path, request_id)
             
-            # 2. 轮询等待完成
+            # 3. 轮询等待完成
             result = await self._poll_task_status(task_id)
             
-            # 3. 获取结果图片 URL
-            # 根据 API 文档，图片在 data.result.images 中
+            # 4. 获取结果图片 URL
             result_field = result.get("result", {})
             images = result_field.get("images", [])
             if not images:
                 raise TranslationError("API 未返回图片")
             
-            # images 可能是字符串列表或对象列表
             first_image = images[0]
             if isinstance(first_image, str):
                 image_url = first_image
             elif isinstance(first_image, dict):
                 url_field = first_image.get("url")
-                # url 字段可能是字符串或列表
-                if isinstance(url_field, list):
-                    image_url = url_field[0] if url_field else None
-                else:
-                    image_url = url_field
+                image_url = url_field[0] if isinstance(url_field, list) else url_field
             else:
                 raise TranslationError(f"未知的图片格式: {type(first_image)}")
             
@@ -365,12 +487,46 @@ class RealTranslationService(TranslationService):
             
             logger.info(f"准备下载图片: {image_url}")
             
-            # 4. 下载图片
-            output_filename = f"translated_{input_path.name}"
-            output_path = output_dir / output_filename
-            await self._download_image(image_url, output_path)
+            # 5. 下载/保存结果
+            final_path = output_dir / f"translated_{input_path.name}"
             
-            return output_path
+            if "http" in image_url:
+                # 增加重试机制，防止服务端断开连接 (RemoteProtocolError)
+                max_retries = 5
+                for attempt in range(max_retries):
+                    try:
+                        async with self.client.stream("GET", image_url) as response:
+                            if response.status_code != 200:
+                                raise TranslationError(f"下载结果失败: {response.status_code}")
+                            with open(final_path, "wb") as f:
+                                async for chunk in response.aiter_bytes():
+                                    f.write(chunk)
+                        break  # 如果下载成功，退出循环
+                    except (httpx.RequestError, httpx.TimeoutException) as e:
+                        if attempt == max_retries - 1:
+                            # 最后一次重试也失败，抛出异常
+                            raise TranslationError(f"下载图片失败 (重试{max_retries}次): {str(e)}")
+                        logger.warning(f"下载中断，正在重试 ({attempt+1}/{max_retries}): {e}")
+                        await asyncio.sleep(1) # 稍等一秒重试
+            else:
+                import base64
+                header, encoded = image_url.split(",", 1)
+                data = base64.b64decode(encoded)
+                with open(final_path, "wb") as f:
+                    f.write(data)
+                    
+            # 6. [NEW] 自动裁剪：恢复原始比例 (或强制拉伸后的比例)
+            try:
+                # 使用 working_image_path 作为"原图"参考
+                # 如果是 original 模式，working = input，恢复原图比例
+                # 如果是 ozon_3_4 模式，working = stretched(3:4)，恢复到 3:4 并切掉白边
+                loop = asyncio.get_running_loop()
+                await loop.run_in_executor(None, self._restore_ratio, working_image_path, final_path)
+                logger.info(f"已恢复比例({target_mode}): {final_path}")
+            except Exception as e:
+                logger.error(f"恢复原始比例失败: {e}，保留原结果")
+                
+            return final_path
             
         except httpx.HTTPStatusError as e:
             logger.error(f"HTTP 错误: {e.response.status_code} - {e.response.text}")
@@ -379,11 +535,49 @@ class RealTranslationService(TranslationService):
             logger.error(f"翻译失败 {input_path.name}: {e}")
             raise TranslationError(str(e))
     
+    def _restore_ratio(self, original_path: Path, translated_path: Path) -> None:
+        """
+        根据原图比例，裁剪掉翻译图的白边 (Padding)
+        """
+        from PIL import Image
+        
+        with Image.open(original_path) as orig_img:
+            orig_w, orig_h = orig_img.size
+            orig_ratio = orig_w / orig_h
+            
+        with Image.open(translated_path) as trans_img:
+            trans_w, trans_h = trans_img.size
+            trans_ratio = trans_w / trans_h
+            
+            # 如果比例几乎一致（误差 < 1%），不需要裁剪
+            if abs(orig_ratio - trans_ratio) < 0.01:
+                return
+
+            # 计算此图在 Padding 时的逻辑（是 Pad 宽 还是 Pad 高？）
+            if orig_ratio > trans_ratio:
+                # 原图更宽 -> 翻译图是加上下白边得到的 -> 我们要切掉上下
+                valid_h = int(trans_w / orig_ratio)
+                diff = trans_h - valid_h
+                top = diff // 2
+                bottom = top + valid_h
+                box = (0, top, trans_w, bottom)
+            else:
+                # 原图更瘦 -> 翻译图是加左右白边得到的 -> 我们要切掉左右
+                valid_w = int(trans_h * orig_ratio)
+                diff = trans_w - valid_w
+                left = diff // 2
+                right = left + valid_w
+                box = (left, 0, right, trans_h)
+            
+            # 执行裁剪
+            cropped_img = trans_img.crop(box)
+            cropped_img.save(translated_path, quality=95)
+
     async def close(self):
         """关闭 HTTP 客户端"""
         await self.client.aclose()
-
-
+    
+    
 def get_translation_service() -> TranslationService:
     """
     获取翻译服务实例
