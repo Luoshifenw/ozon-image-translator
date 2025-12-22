@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import translate
+from routers import translate, auth
 from services.file_handler import ensure_temp_root_exists
 
 # 配置日志格式
@@ -59,6 +59,7 @@ app.add_middleware(
 
 # 挂载路由
 app.include_router(translate.router)
+app.include_router(auth.router)
 
 
 @app.get("/")

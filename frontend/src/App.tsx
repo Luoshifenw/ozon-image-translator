@@ -1,6 +1,7 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import axios from "axios";
 import { UploadZone } from "./components/UploadZone";
+import { LoginModal } from "./components/LoginModal";
 
 interface TranslatedImage {
   original_name: string;
@@ -21,11 +22,49 @@ interface TranslationResponse {
   error?: string;
 }
 
+interface QuotaInfo {
+  usage: number;
+  limit: number;
+  remaining: number;
+}
+
 type Status = "idle" | "uploading" | "processing" | "completed" | "error";
 
 function App() {
+  // Auth & Quota State
+  const [token, setToken] = useState<string | null>(localStorage.getItem("auth_token"));
+  const [quota, setQuota] = useState<QuotaInfo | null>(null);
+
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [status, setStatus] = useState<Status>("idle");
+
+  // Fetch Quota Logic
+  const fetchQuota = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await axios.get<QuotaInfo>("/api/auth/quota", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setQuota(res.data);
+    } catch (e) {
+      if (axios.isAxiosError(e) && (e.response?.status === 401 || e.response?.status === 403)) {
+        setToken(null);
+        localStorage.removeItem("auth_token");
+      }
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (token) {
+      fetchQuota();
+    }
+  }, [token, fetchQuota]);
+
+  const handleLoginSuccess = (newToken: string, quotaLeft: number) => {
+    setToken(newToken);
+    fetchQuota();
+  };
+  // ... rest of state
   const [translatedImages, setTranslatedImages] = useState<TranslatedImage[]>([]);
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [progress, setProgress] = useState<{
@@ -82,9 +121,13 @@ function App() {
       }>("/api/translate-bulk-async", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
+          "Authorization": `Bearer ${token}`
         },
         timeout: 30000,
       });
+
+      // Update quota after submission
+      fetchQuota();
 
       const taskId = submitResponse.data.task_id;
       console.log(`任务已提交: ${taskId}, 模式: ${targetMode}`);
@@ -203,9 +246,21 @@ function App() {
         <div className="absolute -bottom-32 left-1/3 w-96 h-96 bg-pink-400/20 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-4000"></div>
       </div>
 
+
       <div className="relative max-w-7xl mx-auto px-6 py-12 z-10">
+        {!token && <LoginModal onLoginSuccess={handleLoginSuccess} />}
+
         {/* 标题区域 */}
-        <header className="text-center mb-12">
+        <header className="text-center mb-12 relative animate-fade-in">
+          {quota && (
+            <div className="absolute top-0 right-0 hidden md:block">
+              <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/60 border border-white/50 backdrop-blur-sm shadow-sm text-sm text-slate-600">
+                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                剩余额度: <span className="font-bold text-slate-900">{quota.remaining}</span> / {quota.limit}
+              </div>
+            </div>
+          )}
+
           <div className="inline-flex items-center justify-center gap-2 px-4 py-1.5 rounded-full bg-white/60 border border-white/50 backdrop-blur-sm mb-6 shadow-sm">
             <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
             <span className="text-sm font-bold text-blue-700">Ozon 卖家专用工具 v2.1</span>

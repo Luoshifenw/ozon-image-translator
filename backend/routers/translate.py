@@ -10,7 +10,7 @@ import json
 import time
 from pathlib import Path
 from typing import List, Optional
-from fastapi import APIRouter, UploadFile, File, BackgroundTasks, HTTPException, Form
+from fastapi import APIRouter, UploadFile, File, BackgroundTasks, HTTPException, Form, Depends
 from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel
 
@@ -23,13 +23,15 @@ from services.file_handler import (
     TEMP_ROOT,
 )
 from services.translation import get_translation_service, TranslationService
-from services.task_manager import (
-    TaskStatus,
-    save_task_status,
-    load_task_status,
     delete_task_status,
     ensure_task_status_dir
 )
+from services.access_manager import access_manager
+# Avoid circular import by importing inside function or using string forward reference if needed, 
+# but routers usually can import each other if careful. 
+# Better: define get_token_header in a shared dependency file. 
+# For now, I'll import from routers.auth IF it doesn't cause circular import (routers.auth imports access_manager, translate imports access_manager. safe).
+from routers.auth import get_token_header
 
 # #region agent log
 # Debug logging helper
@@ -136,7 +138,8 @@ async def process_single_image(
 async def translate_bulk(
     background_tasks: BackgroundTasks,
     files: List[UploadFile] = File(..., description="要翻译的图片文件列表"),
-    target_mode: str = Form("original", description="输出模式：original 或 ozon_3_4")
+    target_mode: str = Form("original", description="输出模式：original 或 ozon_3_4"),
+    token: str = Depends(get_token_header)
 ):
     """
     批量翻译图片接口
@@ -162,6 +165,10 @@ async def translate_bulk(
     
     logger.info(f"[{request_id}] 开始处理批量翻译请求，共 {len(files)} 个文件")
     
+    # 检查额度
+    if not access_manager.consume_quota(token, len(files)):
+         raise HTTPException(status_code=403, detail="额度不足 (Quota exceeded)")
+
     try:
         # 2. 保存上传的文件到临时输入目录
         saved_files = await save_all_upload_files(files, input_dir)
@@ -467,7 +474,8 @@ async def background_translate_task(
 async def translate_bulk_async(
     background_tasks: BackgroundTasks,
     files: List[UploadFile] = File(..., description="要翻译的图片文件列表"),
-    target_mode: str = Form("original", description="输出模式")
+    target_mode: str = Form("original", description="输出模式"),
+    token: str = Depends(get_token_header)
 ):
     """
     批量翻译图片接口（异步版本）
@@ -487,6 +495,10 @@ async def translate_bulk_async(
     input_dir, output_dir = get_temp_dir(task_id)
     
     logger.info(f"[{task_id}] 接收异步翻译请求，共 {len(files)} 个文件")
+
+    # 检查额度
+    if not access_manager.consume_quota(token, len(files)):
+         raise HTTPException(status_code=403, detail="额度不足 (Quota exceeded)")
     
     try:
         # 保存上传的文件

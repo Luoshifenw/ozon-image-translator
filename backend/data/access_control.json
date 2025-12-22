@@ -1,0 +1,15 @@
+{
+  "codes": {
+    "NMGNB": {
+      "total_slots": 25,
+      "used_slots": 0,
+      "quota_per_user": 100
+    },
+    "NMGQCDZSW": {
+      "total_slots": 9999,
+      "used_slots": 0,
+      "quota_per_user": 999999
+    }
+  },
+  "sessions": {}
+}
