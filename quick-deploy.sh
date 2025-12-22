@@ -61,7 +61,7 @@ sshpass -p "$SERVER_PASSWORD" ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${S
 APIMART_API_KEY=sk-SRi3QiySzzl6eznTqsNZRoW6RS2LUv8ItXqgsVX8xl76eDfG
 APIMART_API_ENDPOINT=https://api.apimart.ai
 TRANSLATION_PROMPT=将图片中的文字替换为俄语
-TRANSLATION_CONCURRENCY=5
+TRANSLATION_CONCURRENCY=20
 SERVICE_MODE=real
 POLL_INTERVAL=3
 POLL_MAX_ATTEMPTS=100
@@ -133,6 +133,7 @@ echo -e "${GREEN}========================================${NC}"
 echo ""
 echo -e "${GREEN}访问地址: ${NC}http://${SERVER_IP}"
 echo ""
+
 
 
 

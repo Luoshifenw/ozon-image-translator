@@ -20,3 +20,4 @@ docker network inspect image-translator-network | grep -A 5 "com.docker.network"
 
 
 
+
