@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from typing import Optional
 from services.access_manager import access_manager
 
-router = APIRouter(prefix="/auth", tags=["Auth"])
+router = APIRouter(prefix="/api/auth", tags=["Auth"])
 
 class VerifyRequest(BaseModel):
     code: str
