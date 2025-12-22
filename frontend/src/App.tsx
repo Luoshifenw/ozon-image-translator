@@ -60,7 +60,7 @@ function App() {
     }
   }, [token, fetchQuota]);
 
-  const handleLoginSuccess = (newToken: string, quotaLeft: number) => {
+  const handleLoginSuccess = (newToken: string, _quotaLeft: number) => {
     setToken(newToken);
     fetchQuota();
   };

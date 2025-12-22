@@ -14,6 +14,11 @@ def update_server():
         print(f"Connecting to {SERVER_IP}...")
         ssh.connect(SERVER_IP, username=SERVER_USER, password=SERVER_PASSWORD)
         
+        # 开启 KeepAlive 防止长时间无数据导致的连接断开
+        transport = ssh.get_transport()
+        if transport:
+            transport.set_keepalive(30)
+        
         # 使用链式命令确保在正确目录执行
         deploy_cmd = (
             "cd /root/ozon-translator && "
