@@ -27,17 +27,32 @@ def update_server():
             "git reset --hard origin/main && "
             "git clean -fd && "
             
+            # 停止服务以释放 80 端口（给 Certbot 用）
+            "docker-compose down && "
+            
+            # 安装 Certbot (尝试 yum 或 apt)
+            "(yum install -y certbot || apt-get install -y certbot) && "
+            
+            # 申请/更新证书 (非交互模式)
+            "certbot certonly --standalone "
+            "-d easy-reach.top -d www.easy-reach.top "
+            "--register-unsafely-without-email "
+            "--agree-tos "
+            "--keep-until-expiring "
+            "--non-interactive && "
+            
             # 更新配置
             "sed -i 's/TRANSLATION_CONCURRENCY=5/TRANSLATION_CONCURRENCY=20/g' backend/.env && "
+            "sed -i 's|BASE_URL=.*|BASE_URL=https://easy-reach.top|g' backend/.env || echo 'BASE_URL=https://easy-reach.top' >> backend/.env && "
+            "sed -i 's|STORAGE_MODE=.*|STORAGE_MODE=cloud|g' backend/.env || echo 'STORAGE_MODE=cloud' >> backend/.env && "
             
             # 清理旧容器
             "docker rm -f image-translator-backend || true && "
             "docker rm -f image-translator-frontend || true && "
             
             # 重启服务
-            "docker-compose down && "
-            "docker-compose build --no-cache backend && "
-            "docker-compose build --no-cache frontend && "
+            "docker-compose build backend && "
+            "docker-compose build frontend && "
             "docker-compose up -d"
         )
         

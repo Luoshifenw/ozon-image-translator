@@ -39,16 +39,16 @@ export function LoginModal({ onLoginSuccess }: LoginModalProps) {
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-            <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 border border-slate-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-100/80 backdrop-blur-sm animate-fade-in">
+            <div className="w-full max-w-md bg-white rounded-lg shadow-blueprint-lg border border-slate-300 p-8">
                 <div className="text-center mb-8">
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-50 mb-4 text-blue-600">
-                        <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-lg bg-blue-50 mb-4 border border-blue-100 text-blue-600">
+                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                         </svg>
                     </div>
-                    <h2 className="text-2xl font-bold text-slate-900">请输入邀请码</h2>
-                    <p className="text-slate-500 mt-2">此服务仅限受邀用户使用</p>
+                    <h2 className="text-xl font-bold text-slate-800">Authentication Required</h2>
+                    <p className="text-slate-500 text-sm mt-1">Please enter your access code to proceed.</p>
                 </div>
 
                 <div className="space-y-6">
@@ -57,30 +57,30 @@ export function LoginModal({ onLoginSuccess }: LoginModalProps) {
                             type="text"
                             value={code}
                             onChange={(e) => setCode(e.target.value)}
-                            placeholder="请输入您的专属邀请码"
-                            className="w-full px-5 py-4 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none text-center text-lg font-bold tracking-widest placeholder:font-normal placeholder:tracking-normal transition-all"
+                            placeholder="ACCESS CODE"
+                            className="w-full px-4 py-3 rounded-md border border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-center font-mono text-lg tracking-widest placeholder:text-slate-300 transition-all bg-slate-50 focus:bg-white"
                             onKeyDown={(e) => e.key === "Enter" && handleLogin()}
                         />
                     </div>
 
                     {error && (
-                        <div className="p-3 rounded-lg bg-red-50 text-red-600 text-sm text-center font-medium animate-pulse">
-                            {error}
+                        <div className="p-3 rounded-md bg-red-50 border border-red-200 text-red-600 text-xs text-center font-medium font-mono">
+                            ERROR: {error}
                         </div>
                     )}
 
                     <button
                         onClick={handleLogin}
                         disabled={loading}
-                        className="w-full py-4 rounded-xl bg-blue-600 text-white font-bold text-lg shadow-lg shadow-blue-600/30 hover:bg-blue-700 hover:shadow-blue-600/40 active:scale-95 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+                        className="w-full py-3 rounded-md bg-blue-600 text-white font-bold text-sm shadow-sm hover:bg-blue-700 active:translate-y-px transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        {loading ? "验证中..." : "解锁访问"}
+                        {loading ? "VERIFYING..." : "AUTHENTICATE"}
                     </button>
                 </div>
 
-                <div className="mt-8 text-center">
-                    <p className="text-slate-400 text-xs">
-                        需要邀请码？请联系管理员获取 access key
+                <div className="mt-8 text-center border-t border-slate-100 pt-4">
+                    <p className="text-slate-400 text-[10px] uppercase tracking-wider">
+                        Authorized Personnel Only
                     </p>
                 </div>
             </div>
