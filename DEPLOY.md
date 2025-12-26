@@ -210,43 +210,61 @@ free -h
 
 ---
 
-## 🌐 域名配置（可选）
+## 🌐 域名与 HTTPS 配置 (easy-reach.top)
 
-### 步骤 1：购买域名
-推荐平台：阿里云、腾讯云、GoDaddy
+### 步骤 1：申请 SSL 证书（Let's Encrypt）
+在服务器（宿主机）上执行以下命令申请免费证书：
 
-### 步骤 2：域名解析
-在域名管理控制台添加 A 记录：
-```
-类型: A
-主机记录: @ 或 translator
-记录值: 47.243.77.183
-TTL: 600
-```
-
-### 步骤 3：配置 HTTPS（Let's Encrypt）
 ```bash
-# 安装 Certbot
+# 1. 停止当前服务（如果有占用 80 端口）
+cd /root/ozon-translator
+docker-compose down
+
+# 2. 安装 Certbot
 yum install -y certbot  # CentOS
-# 或
-apt-get install -y certbot  # Ubuntu
+# 或 apt-get install -y certbot  # Ubuntu
 
-# 申请证书
-certbot certonly --standalone -d yourdomain.com
+# 3. 申请证书
+# 注意：这需要 80 端口未被占用
+certbot certonly --standalone -d easy-reach.top -d www.easy-reach.top --email dearjean@example.com --agree-tos --no-eff-email
 
-# 配置 Nginx（需要修改 nginx.conf）
+# 成功后，证书会保存在 /etc/letsencrypt/live/easy-reach.top/ 目录下
 ```
 
-### 步骤 4：更新环境变量
+### 步骤 2：更新环境变量
+我们需要告诉后端现在的域名是 `https://easy-reach.top`，以便生成正确的图片链接。
+
 ```bash
 cd /root/ozon-translator/backend
-# 修改 .env 中的 BASE_URL
 vim .env
-# 改为: BASE_URL=https://yourdomain.com
+```
 
-# 重启服务
+修改以下配置：
+```ini
+# Storage Mode
+STORAGE_MODE=cloud
+BASE_URL=https://easy-reach.top
+```
+
+### 步骤 3：启动服务
+```bash
 cd /root/ozon-translator
-docker-compose restart
+
+# 重新构建并启动（确保加载新的 docker-compose.yml 配置）
+docker-compose build frontend
+docker-compose up -d
+
+# 检查日志，确保 Nginx 启动成功（没有报错说找不到证书）
+docker-compose logs -f frontend
+```
+
+### 证书自动续期
+Let's Encrypt 证书有效期为 90 天，建议添加定时任务自动续期：
+
+```bash
+crontab -e
+# 添加以下内容（每月 1 号凌晨 3 点尝试续期，并重启前端容器加载新证书）
+0 3 1 * * certbot renew --quiet && docker restart image-translator-frontend
 ```
 
 ---
