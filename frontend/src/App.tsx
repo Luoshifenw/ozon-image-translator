@@ -235,17 +235,17 @@ function App() {
                 <span className="text-xs font-bold tracking-wider text-blue-600 uppercase">System v2.1.0</span>
               </div>
               <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-                Ozon Image Translator
+                Ozon 图片智能翻译
               </h1>
               <p className="text-slate-500 mt-1 text-sm font-medium">
-                Automated formatting & translation pipeline
+                自动化排版与翻译流水线
               </p>
             </div>
 
             {quota && (
               <div className="flex items-center gap-4 bg-white px-4 py-2 border border-slate-200 rounded-lg shadow-sm">
                 <div className="text-right">
-                  <div className="text-xs text-slate-400 font-medium uppercase tracking-wider">Remaining Quota</div>
+                  <div className="text-xs text-slate-400 font-medium uppercase tracking-wider">剩余额度</div>
                   <div className="text-lg font-bold text-slate-900 font-mono">
                     {quota.remaining} <span className="text-slate-400 text-sm font-normal">/ {quota.limit}</span>
                   </div>
@@ -274,14 +274,14 @@ function App() {
                 <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-6">
                   <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                     <span className="w-1 h-4 bg-blue-600 rounded-sm"></span>
-                    Task Configuration
+                    任务配置
                   </h3>
                   <button
                     onClick={handleClearAll}
                     disabled={isProcessing}
                     className="text-slate-400 hover:text-red-500 text-sm font-medium transition-colors"
                   >
-                    Clear Selection
+                    清空列表
                   </button>
                 </div>
 
@@ -297,7 +297,7 @@ function App() {
                     `}
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-bold text-slate-700">Original Scale</span>
+                      <span className="font-bold text-slate-700">保持原比例</span>
                       {targetMode === "original" && (
                         <div className="w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center">
                           <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -306,7 +306,7 @@ function App() {
                         </div>
                       )}
                     </div>
-                    <p className="text-xs text-slate-500">Keep original dimensions via smart padding.</p>
+                    <p className="text-xs text-slate-500">不做裁剪，保持原图尺寸进行翻译。</p>
                   </div>
 
                   <div
@@ -320,7 +320,7 @@ function App() {
                     `}
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-bold text-slate-700">Ozon 3:4 Standard</span>
+                      <span className="font-bold text-slate-700">Ozon 标准 (3:4)</span>
                       {targetMode === "ozon_3_4" && (
                         <div className="w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center">
                           <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -329,7 +329,7 @@ function App() {
                         </div>
                       )}
                     </div>
-                    <p className="text-xs text-slate-500">Auto-resize to Ozon marketplace standard.</p>
+                    <p className="text-xs text-slate-500">自动填充背景并调整为 Ozon 推荐的 3:4 比例。</p>
                   </div>
                 </div>
 
@@ -342,7 +342,11 @@ function App() {
                           status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
                             'bg-red-100 text-red-700'
                       }`}>
-                      {status.toUpperCase()}
+                      {status === 'idle' ? '等待就绪' :
+                        status === 'uploading' ? '正在上传' :
+                          status === 'processing' ? '处理中' :
+                            status === 'completed' ? '已完成' :
+                              '出错'}
                     </span>
                     {isProcessing && (
                       <span className="text-sm text-slate-500 font-mono">
@@ -359,13 +363,13 @@ function App() {
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                       </svg>
-                      Initialize Process
+                      运行任务
                     </button>
                   )}
                 </div>
                 {errorMessage && (
                   <div className="mt-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded flex items-center gap-2">
-                    <span className="font-bold">Error:</span> {errorMessage}
+                    <span className="font-bold">错误:</span> {errorMessage}
                   </div>
                 )}
               </div>
@@ -379,7 +383,7 @@ function App() {
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
                 <span className="w-1 h-4 bg-emerald-500 rounded-sm"></span>
-                Processing Results
+                处理结果
               </h2>
 
               <div className="flex gap-3">
@@ -387,14 +391,14 @@ function App() {
                   onClick={handleClearAll}
                   className="blueprint-btn-secondary text-sm"
                 >
-                  Reset All
+                  重置表格
                 </button>
                 {successCount > 0 && (
                   <button
                     onClick={handleDownloadAll}
                     className="blueprint-btn-primary text-sm bg-emerald-600 hover:bg-emerald-700"
                   >
-                    Download Archive
+                    批量下载
                   </button>
                 )}
               </div>
@@ -419,14 +423,14 @@ function App() {
                             onClick={() => handleDownloadImage(image)}
                             className="bg-white text-slate-900 px-4 py-2 rounded-md font-bold text-sm shadow-sm hover:bg-blue-50"
                           >
-                            Save File
+                            保存图片
                           </button>
                         </div>
                       </>
                     ) : (
                       <div className="flex flex-col items-center justify-center h-full p-4 text-center">
                         <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-500 mb-2">!</div>
-                        <span className="text-xs text-red-500 font-medium">{image.error || 'Failed'}</span>
+                        <span className="text-xs text-red-500 font-medium">{image.error || '失败'}</span>
                       </div>
                     )}
 
@@ -435,7 +439,7 @@ function App() {
                         ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                         : 'bg-red-50 text-red-700 border-red-200'
                         }`}>
-                        {image.status.toUpperCase()}
+                        {image.status === 'success' ? 'SUCCESS' : 'FAILED'}
                       </span>
                     </div>
                   </div>

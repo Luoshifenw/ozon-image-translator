@@ -47,8 +47,8 @@ export function LoginModal({ onLoginSuccess }: LoginModalProps) {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                         </svg>
                     </div>
-                    <h2 className="text-xl font-bold text-slate-800">Authentication Required</h2>
-                    <p className="text-slate-500 text-sm mt-1">Please enter your access code to proceed.</p>
+                    <h2 className="text-xl font-bold text-slate-800">系统访问验证</h2>
+                    <p className="text-slate-500 text-sm mt-1">请输入您的访问代码以继续</p>
                 </div>
 
                 <div className="space-y-6">
@@ -74,7 +74,7 @@ export function LoginModal({ onLoginSuccess }: LoginModalProps) {
                         disabled={loading}
                         className="w-full py-3 rounded-md bg-blue-600 text-white font-bold text-sm shadow-sm hover:bg-blue-700 active:translate-y-px transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        {loading ? "VERIFYING..." : "AUTHENTICATE"}
+                        {loading ? "正在验证..." : "登录系统"}
                     </button>
                 </div>
 

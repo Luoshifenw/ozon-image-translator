@@ -79,10 +79,10 @@ export function UploadZone({ onFilesSelected, disabled = false }: UploadZoneProp
 
       <div>
         <h3 className="text-lg font-bold text-slate-800">
-          {isDragOver ? 'Drop Files Here' : 'Upload Source Images'}
+          {isDragOver ? '释放文件以上传' : '点击选择或拖拽上传'}
         </h3>
         <p className="text-sm text-slate-500 mt-1 max-w-sm mx-auto">
-          Drag & drop or click to browse. Supports JPG, PNG, WEBP.
+          支持批量上传 · 自动检测 JPG, PNG, WEBP
         </p>
       </div>
 
@@ -96,4 +96,3 @@ export function UploadZone({ onFilesSelected, disabled = false }: UploadZoneProp
     </div>
   );
 }
-
