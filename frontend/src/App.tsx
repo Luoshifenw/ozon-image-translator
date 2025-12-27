@@ -218,63 +218,58 @@ function App() {
   ).length;
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 font-sans selection:bg-blue-100 selection:text-blue-900 overflow-x-hidden">
-      {/* Blueprint Grid Background is handled in index.css body */}
+    <div className="min-h-screen font-sans selection:bg-aether-accent/30 selection:text-aether-dark">
+      {/* Background handled in index.css */}
 
-
-
-      <div className="relative max-w-5xl mx-auto px-6 py-12 z-10">
+      <div className="relative max-w-6xl mx-auto px-6 py-16 z-10">
         {!token && <LoginModal onLoginSuccess={handleLoginSuccess} />}
 
-        {/* Technical Header */}
-        <header className="mb-12 border-b border-slate-200 pb-8">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-            <div>
-              <div className="inline-flex items-center gap-2 mb-2">
-                <span className="w-2 h-2 bg-blue-600 rounded-sm"></span>
-                <span className="text-xs font-bold tracking-wider text-blue-600 uppercase">System v2.1.0</span>
-              </div>
-              <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-                Ozon 图片智能翻译
-              </h1>
-              <p className="text-slate-500 mt-1 text-sm font-medium">
-                自动化排版与翻译流水线
-              </p>
-            </div>
-
-            {quota && (
-              <div className="flex items-center gap-4 bg-white px-4 py-2 border border-slate-200 rounded-lg shadow-sm">
-                <div className="text-right">
-                  <div className="text-xs text-slate-400 font-medium uppercase tracking-wider">剩余额度</div>
-                  <div className="text-lg font-bold text-slate-900 font-mono">
-                    {quota.remaining} <span className="text-slate-400 text-sm font-normal">/ {quota.limit}</span>
-                  </div>
-                </div>
-                <div className="w-10 h-10 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center">
-                  <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                </div>
-              </div>
-            )}
+        {/* Modern SaaS Header */}
+        <header className="mb-16 text-center animate-fade-in">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-slate-200 shadow-sm mb-6">
+            <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">System v2.1 Online</span>
           </div>
+
+          <h1 className="text-5xl md:text-6xl font-bold text-slate-900 tracking-tight mb-6 leading-tight">
+            Ozon <span className="text-transparent bg-clip-text bg-gradient-to-r from-aether-accent to-amber-500">图片智能翻译</span>
+          </h1>
+
+          <p className="text-xl text-slate-500 max-w-2xl mx-auto leading-relaxed">
+            专为跨境电商打造的自动化视觉流水线。
+            <span className="block mt-2 text-slate-400 text-lg">智能排版 · 批量处理 · 无损画质</span>
+          </p>
+
+          {quota && (
+            <div className="mt-8 inline-flex items-center justify-center gap-6 p-1 pr-6 bg-white rounded-full border border-slate-100 shadow-float">
+              <div className="w-10 h-10 rounded-full bg-aether-accent flex items-center justify-center text-aether-dark shadow-glow">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+              </div>
+              <div className="text-left">
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">剩余额度</div>
+                <div className="text-sm font-bold text-slate-900">{quota.remaining} <span className="text-slate-400 font-normal">/ {quota.limit}</span></div>
+              </div>
+            </div>
+          )}
         </header>
 
-        {/* 上传区域 */}
+        {/* Upload & Config Section */}
         {!hasResults && (
-          <div className="space-y-12">
-            <UploadZone
-              onFilesSelected={handleFilesSelected}
-              disabled={isProcessing}
-            />
+          <div className="space-y-10 max-w-4xl mx-auto">
+            <div className="aether-card p-2">
+              <UploadZone
+                onFilesSelected={handleFilesSelected}
+                disabled={isProcessing}
+              />
+            </div>
 
             {/* Configuration Panel */}
             {selectedFiles.length > 0 && (
-              <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-6 animate-fade-in">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-6">
-                  <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                    <span className="w-1 h-4 bg-blue-600 rounded-sm"></span>
+              <div className="aether-card p-8 animate-fade-in">
+                <div className="flex items-center justify-between mb-8">
+                  <h3 className="text-xl font-bold text-slate-900 flex items-center gap-3">
                     任务配置
+                    <span className="text-sm font-normal text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">{selectedFiles.length} 个文件</span>
                   </h3>
                   <button
                     onClick={handleClearAll}
@@ -285,91 +280,93 @@ function App() {
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div
                     onClick={() => !isProcessing && setTargetMode("original")}
                     className={`
-                      cursor-pointer relative p-4 rounded-lg border transition-all duration-200
+                      cursor-pointer relative p-6 rounded-2xl border-2 transition-all duration-300
                       ${targetMode === "original"
-                        ? "border-blue-600 bg-blue-50/50 ring-1 ring-blue-600"
-                        : "border-slate-200 hover:border-slate-300 bg-white"
+                        ? "border-aether-accent bg-amber-50/30 shadow-sm"
+                        : "border-slate-100 hover:border-slate-200 bg-slate-50/50"
                       }
                     `}
                   >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-bold text-slate-700">保持原比例</span>
-                      {targetMode === "original" && (
-                        <div className="w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center">
-                          <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                          </svg>
-                        </div>
-                      )}
+                    <div className="flex items-center justify-between mb-3">
+                      <span className={`font-bold text-lg ${targetMode === "original" ? "text-slate-900" : "text-slate-600"}`}>保持原比例</span>
+                      <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${targetMode === "original" ? "border-aether-accent bg-aether-accent" : "border-slate-200"
+                        }`}>
+                        {targetMode === "original" && <svg className="w-3 h-3 text-slate-900" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                      </div>
                     </div>
-                    <p className="text-xs text-slate-500">不做裁剪，保持原图尺寸进行翻译。</p>
+                    <p className="text-sm text-slate-500 leading-relaxed">不做裁剪，保持原图尺寸进行翻译。适合非标品或长图。</p>
                   </div>
 
                   <div
                     onClick={() => !isProcessing && setTargetMode("ozon_3_4")}
                     className={`
-                      cursor-pointer relative p-4 rounded-lg border transition-all duration-200
+                      cursor-pointer relative p-6 rounded-2xl border-2 transition-all duration-300
                       ${targetMode === "ozon_3_4"
-                        ? "border-blue-600 bg-blue-50/50 ring-1 ring-blue-600"
-                        : "border-slate-200 hover:border-slate-300 bg-white"
+                        ? "border-aether-accent bg-amber-50/30 shadow-sm"
+                        : "border-slate-100 hover:border-slate-200 bg-slate-50/50"
                       }
                     `}
                   >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-bold text-slate-700">Ozon 标准 (3:4)</span>
-                      {targetMode === "ozon_3_4" && (
-                        <div className="w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center">
-                          <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                          </svg>
-                        </div>
-                      )}
+                    <div className="flex items-center justify-between mb-3">
+                      <span className={`font-bold text-lg ${targetMode === "ozon_3_4" ? "text-slate-900" : "text-slate-600"}`}>Ozon 标准 (3:4)</span>
+                      <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${targetMode === "ozon_3_4" ? "border-aether-accent bg-aether-accent" : "border-slate-200"
+                        }`}>
+                        {targetMode === "ozon_3_4" && <svg className="w-3 h-3 text-slate-900" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                      </div>
                     </div>
-                    <p className="text-xs text-slate-500">自动填充背景并调整为 Ozon 推荐的 3:4 比例。</p>
+                    <p className="text-sm text-slate-500 leading-relaxed">自动填充背景并调整为 3:4。完全符合 Ozon 主图规范。</p>
                   </div>
                 </div>
 
                 {/* Status Bar */}
-                <div className="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className={`px-2 py-1 text-xs font-mono font-bold rounded ${status === 'idle' ? 'bg-slate-100 text-slate-500' :
-                      status === 'uploading' ? 'bg-yellow-100 text-yellow-700' :
+                <div className="mt-10 flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-bold ${status === 'idle' ? 'bg-slate-100 text-slate-500' :
+                      status === 'uploading' ? 'bg-amber-100 text-amber-700' :
                         status === 'processing' ? 'bg-blue-100 text-blue-700' :
                           status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
                             'bg-red-100 text-red-700'
                       }`}>
+                      <span className={`w-2 h-2 rounded-full ${status === 'idle' ? 'bg-slate-400' :
+                        status === 'uploading' ? 'bg-amber-500 animate-pulse' :
+                          status === 'processing' ? 'bg-blue-500 animate-pulse' :
+                            status === 'completed' ? 'bg-emerald-500' :
+                              'bg-red-500'
+                        }`}></span>
                       {status === 'idle' ? '等待就绪' :
-                        status === 'uploading' ? '正在上传' :
-                          status === 'processing' ? '处理中' :
-                            status === 'completed' ? '已完成' :
-                              '出错'}
-                    </span>
+                        status === 'uploading' ? '上传中...' :
+                          status === 'processing' ? 'AI处理中' :
+                            status === 'completed' ? '处理完成' :
+                              '遇到错误'}
+                    </div>
+
                     {isProcessing && (
-                      <span className="text-sm text-slate-500 font-mono">
-                        {progress.processed}/{progress.total}
-                      </span>
+                      <div className="text-sm font-mono text-slate-400">
+                        {progress.processed} / {progress.total}
+                      </div>
                     )}
                   </div>
 
                   {status === "idle" && (
                     <button
                       onClick={handleStartTranslation}
-                      className="blueprint-btn-primary flex items-center gap-2"
+                      className="aether-btn-primary"
                     >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                       </svg>
-                      运行任务
+                      立即开始处理
                     </button>
                   )}
                 </div>
                 {errorMessage && (
-                  <div className="mt-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded flex items-center gap-2">
-                    <span className="font-bold">错误:</span> {errorMessage}
+                  <div className="mt-6 p-4 bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl flex items-center gap-3">
+                    <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    {errorMessage}
                   </div>
                 )}
               </div>
@@ -377,79 +374,80 @@ function App() {
           </div>
         )}
 
-        {/* Results Grid - Technical View */}
+        {/* Results Grid - Modern View */}
         {hasResults && (
-          <div className="space-y-6 animate-fade-in">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                <span className="w-1 h-4 bg-emerald-500 rounded-sm"></span>
+          <div className="space-y-8 animate-fade-in">
+            <div className="flex items-center justify-between px-2">
+              <h2 className="text-2xl font-bold text-slate-900">
                 处理结果
               </h2>
 
-              <div className="flex gap-3">
+              <div className="flex gap-4">
                 <button
                   onClick={handleClearAll}
-                  className="blueprint-btn-secondary text-sm"
+                  className="aether-btn-secondary py-2.5 px-5"
                 >
-                  重置表格
+                  开始新任务
                 </button>
                 {successCount > 0 && (
                   <button
                     onClick={handleDownloadAll}
-                    className="blueprint-btn-primary text-sm bg-emerald-600 hover:bg-emerald-700"
+                    className="aether-btn-primary py-2.5 px-6 bg-emerald-500 hover:bg-emerald-600 border-emerald-400 text-white shadow-emerald-200"
                   >
-                    批量下载
+                    批量下载全部
                   </button>
                 )}
               </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {translatedImages.map((image, index) => (
                 <div
                   key={index}
-                  className="blueprint-card blueprint-card-hover group flex flex-col h-full"
+                  className="aether-card aether-card-hover group flex flex-col h-full overflow-hidden"
                 >
-                  <div className="relative aspect-[3/4] bg-slate-100 border-b border-slate-200 overflow-hidden rounded-t-lg">
+                  <div className="relative aspect-[3/4] bg-slate-100 overflow-hidden">
                     {image.status === "success" ? (
                       <>
                         <img
                           src={`/api/download/${image.file_path}`}
                           alt={image.translated_name}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                         />
-                        <div className="absolute inset-0 bg-slate-900/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center backdrop-blur-[2px]">
                           <button
                             onClick={() => handleDownloadImage(image)}
-                            className="bg-white text-slate-900 px-4 py-2 rounded-md font-bold text-sm shadow-sm hover:bg-blue-50"
+                            className="bg-white text-slate-900 px-5 py-2.5 rounded-xl font-bold text-sm shadow-float hover:scale-105 transition-transform"
                           >
-                            保存图片
+                            下载图片
                           </button>
                         </div>
                       </>
                     ) : (
-                      <div className="flex flex-col items-center justify-center h-full p-4 text-center">
-                        <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-500 mb-2">!</div>
-                        <span className="text-xs text-red-500 font-medium">{image.error || '失败'}</span>
+                      <div className="flex flex-col items-center justify-center h-full p-6 text-center">
+                        <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center text-red-500 mb-3">
+                          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                        </div>
+                        <span className="text-sm text-slate-500 font-medium">{image.error || '处理失败'}</span>
                       </div>
                     )}
 
-                    <div className="absolute top-2 left-2">
-                      <span className={`blueprint-badge shadow-sm border ${image.status === 'success'
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                        : 'bg-red-50 text-red-700 border-red-200'
-                        }`}>
-                        {image.status === 'success' ? 'SUCCESS' : 'FAILED'}
-                      </span>
+                    <div className="absolute top-3 left-3">
+                      {image.status === 'success' ? (
+                        <span className="aether-badge bg-emerald-400 text-emerald-900 shadow-sm">SUCCESS</span>
+                      ) : (
+                        <span className="aether-badge bg-red-100 text-red-600">FAILED</span>
+                      )}
                     </div>
                   </div>
 
-                  <div className="p-3 bg-white rounded-b-lg flex-1 flex flex-col justify-end">
-                    <div className="text-xs font-mono text-slate-500 truncate" title={image.original_name}>
+                  <div className="p-4 bg-white flex-1 flex flex-col justify-end border-t border-slate-50">
+                    <div className="font-medium text-slate-700 text-sm truncate" title={image.original_name}>
                       {image.original_name}
                     </div>
-                    <div className="text-[10px] text-slate-400 mt-1 uppercase tracking-wide">
-                      OUTPUT: {targetMode === 'ozon_3_4' ? '3:4 FORMAT' : 'ORIGINAL'}
+                    <div className="text-xs text-slate-400 mt-1 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+                      {targetMode === 'ozon_3_4' ? 'Ozon 3:4' : '原比例'}
                     </div>
                   </div>
                 </div>

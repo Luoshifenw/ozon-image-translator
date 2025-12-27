@@ -39,49 +39,43 @@ export function LoginModal({ onLoginSuccess }: LoginModalProps) {
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-100/80 backdrop-blur-sm animate-fade-in">
-            <div className="w-full max-w-md bg-white rounded-lg shadow-blueprint-lg border border-slate-300 p-8">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/20 backdrop-blur-md animate-fade-in">
+            <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl p-10 border border-white/70">
                 <div className="text-center mb-8">
-                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-lg bg-blue-50 mb-4 border border-blue-100 text-blue-600">
-                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-amber-50 mb-5 text-amber-500 shadow-sm border border-amber-100">
+                        <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                         </svg>
                     </div>
-                    <h2 className="text-xl font-bold text-slate-800">系统访问验证</h2>
-                    <p className="text-slate-500 text-sm mt-1">请输入您的访问代码以继续</p>
+                    <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Access Required</h2>
+                    <p className="text-slate-500 font-medium mt-2">Invites Only</p>
                 </div>
 
-                <div className="space-y-6">
+                <div className="space-y-5">
                     <div>
                         <input
                             type="text"
                             value={code}
                             onChange={(e) => setCode(e.target.value)}
-                            placeholder="ACCESS CODE"
-                            className="w-full px-4 py-3 rounded-md border border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-center font-mono text-lg tracking-widest placeholder:text-slate-300 transition-all bg-slate-50 focus:bg-white"
+                            placeholder="输入访问通行证"
+                            className="w-full px-5 py-4 rounded-xl bg-slate-50 border border-transparent focus:bg-white focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 outline-none text-center font-bold text-lg tracking-widest placeholder:text-slate-300 placeholder:font-normal placeholder:tracking-normal transition-all duration-300"
                             onKeyDown={(e) => e.key === "Enter" && handleLogin()}
                         />
                     </div>
 
                     {error && (
-                        <div className="p-3 rounded-md bg-red-50 border border-red-200 text-red-600 text-xs text-center font-medium font-mono">
-                            ERROR: {error}
+                        <div className="p-3 rounded-xl bg-red-50 text-red-500 text-sm text-center font-medium">
+                            {error}
                         </div>
                     )}
 
                     <button
                         onClick={handleLogin}
                         disabled={loading}
-                        className="w-full py-3 rounded-md bg-blue-600 text-white font-bold text-sm shadow-sm hover:bg-blue-700 active:translate-y-px transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full py-4 rounded-xl bg-aether-accent text-slate-900 font-bold text-base shadow-lg shadow-amber-200 hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        {loading ? "正在验证..." : "登录系统"}
+                        {loading ? "Verifying..." : "Enter Workspace"}
                     </button>
-                </div>
-
-                <div className="mt-8 text-center border-t border-slate-100 pt-4">
-                    <p className="text-slate-400 text-[10px] uppercase tracking-wider">
-                        Authorized Personnel Only
-                    </p>
                 </div>
             </div>
         </div>

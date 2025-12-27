@@ -4,41 +4,54 @@
 
 @layer base {
   body {
-    @apply font-sans antialiased bg-slate-50 text-slate-800;
-    background-image: linear-gradient(to right, #e2e8f0 1px, transparent 1px),
-      linear-gradient(to bottom, #e2e8f0 1px, transparent 1px);
-    background-size: 40px 40px;
-    background-position: center top;
+    @apply bg-slate-50 text-slate-700 antialiased;
+    /* Soft warm gradient backdrop */
+    background-image: radial-gradient(circle at 60% 0%, #fffbeb 0%, #f8fafc 40%, #f1f5f9 100%);
+    background-attachment: fixed;
   }
 }
 
 @layer utilities {
-  .blueprint-card {
-    @apply bg-white border border-slate-200 rounded-lg shadow-blueprint transition-all duration-200;
+
+  /* Aetherfield Card: Soft floating effect, no hard borders */
+  .aether-card {
+    @apply bg-white rounded-3xl shadow-float border border-white/60 transition-all duration-300 backdrop-blur-sm;
   }
 
-  .blueprint-card-hover {
-    @apply hover:border-blue-400 hover:shadow-blueprint-lg hover:-translate-y-0.5;
+  .aether-card-hover {
+    @apply hover:-translate-y-1 hover:shadow-float-lg hover:border-white/80;
   }
 
-  .blueprint-btn-primary {
-    @apply bg-blue-600 text-white font-medium px-4 py-2 rounded-lg hover:bg-blue-700 active:translate-y-px transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:active:translate-y-0;
+  /* Primary Button: Vivid Yellow with dark text */
+  .aether-btn-primary {
+    @apply bg-aether-accent text-aether-dark font-bold px-8 py-3.5 rounded-2xl shadow-sm hover:shadow-glow hover:scale-[1.02] active:scale-95 transition-all duration-300 border border-yellow-300/40 flex items-center justify-center gap-2 text-sm;
   }
 
-  .blueprint-btn-secondary {
-    @apply bg-white text-slate-700 font-medium px-4 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 hover:border-slate-300 active:translate-y-px transition-all shadow-sm;
+  /* Secondary Button: Clean white/slate */
+  .aether-btn-secondary {
+    @apply bg-white text-slate-600 font-semibold px-6 py-3.5 rounded-2xl border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 text-sm shadow-sm;
   }
 
-  .blueprint-badge {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  /* Text Styles */
+  .text-heading {
+    @apply font-bold text-slate-900 tracking-tight;
+  }
+
+  .text-body {
+    @apply text-slate-500 leading-relaxed;
+  }
+
+  /* Custom Badges */
+  .aether-badge {
+    @apply px-3 py-1 rounded-full text-xs font-bold tracking-wide uppercase shadow-sm;
   }
 }
 
-/* Custom Animations */
+/* Smooth Animations */
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(5px);
+    transform: translateY(15px);
   }
 
   to {
@@ -48,5 +61,5 @@
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.4s ease-out forwards;
+  animation: fadeIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }

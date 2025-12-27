@@ -49,13 +49,16 @@ export function UploadZone({ onFilesSelected, disabled = false }: UploadZoneProp
       onDragOver={handleDragOver}
       onDrop={handleDrop}
       className={`
-        relative h-64 w-full rounded-lg border-2 border-dashed transition-all duration-200
-        flex flex-col items-center justify-center text-center
+        relative flex flex-col items-center justify-center
+        group
+        w-full h-80 rounded-[2rem]
+        transition-all duration-300 ease-out
+        cursor-pointer overflow-hidden
         ${disabled
-          ? 'border-slate-200 bg-slate-50 cursor-not-allowed opacity-60'
+          ? 'bg-slate-50 opacity-60 cursor-not-allowed'
           : isDragOver
-            ? 'border-blue-500 bg-blue-50 ring-4 ring-blue-500/10'
-            : 'border-slate-300 bg-white hover:border-slate-400 hover:bg-slate-50 cursor-pointer'
+            ? 'bg-amber-50 shadow-inner'
+            : 'bg-slate-50 hover:bg-white hover:shadow-float border border-transparent hover:border-slate-100' // Subtle feedback
         }
       `}
     >
@@ -65,32 +68,51 @@ export function UploadZone({ onFilesSelected, disabled = false }: UploadZoneProp
         multiple
         onChange={handleFileSelect}
         disabled={disabled}
-        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed z-20"
       />
 
+      {/* Modern Icon Container */}
       <div className={`
-        p-4 rounded-full bg-slate-100 text-slate-400 mb-3 transition-colors
-        ${isDragOver ? 'bg-blue-100 text-blue-600' : 'group-hover:text-slate-600'}
+        relative mb-6 p-6 rounded-3xl
+        transition-all duration-500
+        ${isDragOver
+          ? 'bg-aether-accent text-slate-900 scale-110 rotate-3 shadow-glow'
+          : 'bg-white text-slate-300 shadow-sm group-hover:text-aether-accent group-hover:shadow-md'
+        }
       `}>
-        <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+        <svg
+          className="w-10 h-10 transition-colors duration-300"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2} // Thicker, friendly stroke
+            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+          />
         </svg>
       </div>
 
-      <div>
-        <h3 className="text-lg font-bold text-slate-800">
-          {isDragOver ? '释放文件以上传' : '点击选择或拖拽上传'}
+      {/* Friendly Text */}
+      <div className="relative z-10 text-center space-y-2 px-4">
+        <h3 className={`
+            text-xl font-bold transition-all duration-300
+            ${isDragOver ? 'text-slate-900' : 'text-slate-700'}
+         `}>
+          {isDragOver ? '释放文件即刻上传' : '点击选择或拖拽上传'}
         </h3>
-        <p className="text-sm text-slate-500 mt-1 max-w-sm mx-auto">
-          支持批量上传 · 自动检测 JPG, PNG, WEBP
+        <p className="text-slate-400 font-medium text-sm max-w-sm mx-auto leading-relaxed">
+          支持 JPG, PNG, WEBP 格式 · 智能批量处理
         </p>
       </div>
 
       {!disabled && (
-        <div className="absolute bottom-4 right-4">
-          <span className="text-[10px] font-mono text-slate-300 uppercase tracking-widest border border-slate-200 px-2 py-0.5 rounded">
-            INPUT ZONE
-          </span>
+        <div className="absolute bottom-6 flex gap-2 opacity-50 group-hover:opacity-100 transition-opacity">
+          <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+          <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+          <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
         </div>
       )}
     </div>
