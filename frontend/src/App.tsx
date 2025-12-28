@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import axios from "axios";
 import { UploadZone } from "./components/UploadZone";
 import { LoginModal } from "./components/LoginModal";
+import { FilePreviewGrid } from "./components/FilePreviewGrid";
 
 interface TranslatedImage {
   original_name: string;
@@ -79,8 +80,9 @@ function App() {
   const [targetMode, setTargetMode] = useState<"original" | "ozon_3_4">("original");
 
   // 文件选择处理
+  // 文件选择处理
   const handleFilesSelected = useCallback((files: File[]) => {
-    setSelectedFiles(files);
+    setSelectedFiles(prev => [...prev, ...files]);
     setStatus("idle");
     setTranslatedImages([]);
     setErrorMessage("");
@@ -94,6 +96,11 @@ function App() {
     setErrorMessage("");
     setProgress({ processed: 0, total: 0 });
   }, []);
+
+  const handleRemoveFile = useCallback((indexToRemove: number) => {
+    setSelectedFiles((prev) => prev.filter((_, index) => index !== indexToRemove));
+  }, []);
+
 
   // 开始翻译（异步轮询版本）
   const handleStartTranslation = useCallback(async () => {
@@ -262,11 +269,20 @@ function App() {
 
         {/* 上传区域 */}
         {!hasResults && (
-          <div className="space-y-12">
+          <div className="space-y-8">
             <UploadZone
               onFilesSelected={handleFilesSelected}
               disabled={isProcessing}
             />
+
+            {/* Staging Area / Preview Grid */}
+            {selectedFiles.length > 0 && (
+              <FilePreviewGrid
+                files={selectedFiles}
+                onRemove={handleRemoveFile}
+                disabled={isProcessing}
+              />
+            )}
 
             {/* Configuration Panel */}
             {selectedFiles.length > 0 && (
