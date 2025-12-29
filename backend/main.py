@@ -8,8 +8,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import translate, auth
+from routers import translate, auth, payments
 from services.file_handler import ensure_temp_root_exists
+from services.db import init_db
 
 # 配置日志格式
 logging.basicConfig(
@@ -27,6 +28,7 @@ async def lifespan(app: FastAPI):
     # 启动时执行
     logger.info("🚀 图片翻译服务启动中...")
     ensure_temp_root_exists()
+    init_db()
     logger.info("✅ 临时目录已就绪")
     
     yield
@@ -60,6 +62,7 @@ app.add_middleware(
 # 挂载路由
 app.include_router(translate.router)
 app.include_router(auth.router)
+app.include_router(payments.router)
 
 
 @app.get("/")
@@ -86,4 +89,3 @@ if __name__ == "__main__":
         port=8000,
         reload=True  # 开发模式启用热重载
     )
-

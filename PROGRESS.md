@@ -116,3 +116,48 @@
 ---
 
 如有新的需求，请更新此文档。
+
+---
+
+## 2025-09-27 工作进度（账户/支付体系升级）
+
+### 已完成 ✅
+
+| 模块 | 文件 | 状态 | 说明 |
+| :--- | :--- | :--- | :--- |
+| **SQLite + SQLModel** | `backend/models/db_models.py` | ✅ 新增 | 新建 Users/Orders 数据模型，替代原 JSON 存储 |
+| **数据库初始化** | `backend/services/db.py` `backend/main.py` | ✅ 完成 | 启动时创建表并初始化连接 |
+| **JWT 认证** | `backend/services/security.py` `backend/routers/auth.py` | ✅ 完成 | 注册/登录、JWT 发行与校验、余额查询 |
+| **积分扣费** | `backend/routers/translate.py` | ✅ 完成 | 翻译前校验余额并扣除积分 |
+| **ZPay 支付** | `backend/routers/payments.py` | ✅ 新增 | 创建订单、MD5 签名校验、回调自动加分 |
+| **前端登录/注册** | `frontend/src/components/LoginModal.tsx` | ✅ 完成 | Tab 切换登录/注册，邀请码逻辑接入 |
+| **充值弹窗** | `frontend/src/components/RechargeModal.tsx` | ✅ 新增 | 展示三档套餐并拉起支付 |
+| **控制台余额展示** | `frontend/src/App.tsx` | ✅ 完成 | 实时余额 + 充值按钮 |
+
+### 当前阶段完成情况（用户确认）✅
+
+- 用户系统：注册、登录、积分管理（注册/试用送积分）已上线并验证通过
+- 前端界面：新的登录弹窗、充值弹窗界面已实装
+- 数据库：SQLite 迁移完成，数据读写正常
+
+### 配置与依赖更新
+
+- `backend/requirements.txt`：新增 SQLModel、JWT、bcrypt、email 校验依赖
+- `backend/config.py`：新增 `DB_PATH`、`JWT_SECRET`、`INVITE_CODES`、`ZPAY_*` 等配置项
+
+### 待确认/后续事项
+
+- 填写并校验 `ZPAY_PID`、`ZPAY_KEY`、`ZPAY_NOTIFY_URL`、`ZPAY_RETURN_URL`
+- 运行后端依赖安装并启动服务，验证注册/登录/扣费/支付回调全链路
+
+### 当前阻塞问题（Blocker）
+
+- 支付签名失败：已修复 `&key=` 前缀问题并补全 `sitename` 参数，但 ZPay 仍返回 MD5 签名错误（参考 `pay.txt` 官方 demo）
+
+### 下一步操作清单（按优先级）
+
+1. 配置后端环境变量（`backend/.env`）：`JWT_SECRET`、`INVITE_CODES`、`ZPAY_PID`、`ZPAY_KEY`、`ZPAY_NOTIFY_URL`、`ZPAY_RETURN_URL`、`BASE_URL`
+2. 安装后端依赖并启动服务，确认能自动创建 SQLite 数据库（检查 `backend/data/app.db`）
+3. 手动验证注册/登录/余额接口：`/api/auth/register`、`/api/auth/token`、`/api/auth/quota`
+4. 验证翻译扣费：上传多张图后确认余额减少是否正确
+5. 配置 ZPay 回调地址并做一次真实支付回调测试，确认自动加分

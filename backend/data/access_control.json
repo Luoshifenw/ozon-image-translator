@@ -2,14 +2,33 @@
   "codes": {
     "NMGNB": {
       "total_slots": 25,
-      "used_slots": 0,
+      "used_slots": 2,
       "quota_per_user": 100
     },
     "NMGQCDZSW": {
       "total_slots": 9999,
-      "used_slots": 0,
+      "used_slots": 1,
       "quota_per_user": 999999
     }
   },
-  "sessions": {}
+  "sessions": {
+    "cd2f136c-ecd0-4dff-a41a-d0916365b4d0": {
+      "created_at": 1766895589.632682,
+      "usage_count": 0,
+      "max_usage": 100,
+      "source_code": "NMGNB"
+    },
+    "f96be100-8c9f-49ae-83a1-e4c493de7fe2": {
+      "created_at": 1766895834.940405,
+      "usage_count": 0,
+      "max_usage": 100,
+      "source_code": "NMGNB"
+    },
+    "64b4f230-cbb4-4e47-be43-3a3378f38adc": {
+      "created_at": 1766895915.826985,
+      "usage_count": 0,
+      "max_usage": 999999,
+      "source_code": "NMGQCDZSW"
+    }
+  }
 }

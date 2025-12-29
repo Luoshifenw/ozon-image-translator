@@ -2,6 +2,8 @@ import { useState, useCallback, useEffect } from "react";
 import axios from "axios";
 import { UploadZone } from "./components/UploadZone";
 import { LoginModal } from "./components/LoginModal";
+import { RechargeModal } from "./components/RechargeModal";
+import type { RechargePackage } from "./components/RechargeModal";
 import { FilePreviewGrid } from "./components/FilePreviewGrid";
 
 interface TranslatedImage {
@@ -23,10 +25,8 @@ interface TranslationResponse {
   error?: string;
 }
 
-interface QuotaInfo {
-  usage: number;
-  limit: number;
-  remaining: number;
+interface BalanceInfo {
+  credits: number;
 }
 
 type Status = "idle" | "uploading" | "processing" | "completed" | "error";
@@ -34,36 +34,44 @@ type Status = "idle" | "uploading" | "processing" | "completed" | "error";
 function App() {
   // Auth & Quota State
   const [token, setToken] = useState<string | null>(localStorage.getItem("auth_token"));
-  const [quota, setQuota] = useState<QuotaInfo | null>(null);
+  const [balance, setBalance] = useState<BalanceInfo | null>(null);
+  const [showRecharge, setShowRecharge] = useState(false);
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [status, setStatus] = useState<Status>("idle");
 
   // Fetch Quota Logic
-  const fetchQuota = useCallback(async () => {
+  const fetchBalance = useCallback(async () => {
     if (!token) return;
     try {
-      const res = await axios.get<QuotaInfo>("/api/auth/quota", {
+      const res = await axios.get<BalanceInfo>("/api/auth/quota", {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setQuota(res.data);
+      setBalance(res.data);
     } catch (e) {
       if (axios.isAxiosError(e) && (e.response?.status === 401 || e.response?.status === 403)) {
         setToken(null);
+        setBalance(null);
         localStorage.removeItem("auth_token");
       }
     }
   }, [token]);
 
   useEffect(() => {
-    if (token) {
-      fetchQuota();
+    if (!token) return;
+    fetchBalance();
+    const interval = setInterval(fetchBalance, 30000);
+    return () => clearInterval(interval);
+  }, [token, fetchBalance]);
+  useEffect(() => {
+    if (!token) {
+      setBalance(null);
     }
-  }, [token, fetchQuota]);
+  }, [token]);
 
-  const handleLoginSuccess = (newToken: string, _quotaLeft: number) => {
+  const handleLoginSuccess = (newToken: string, _credits: number) => {
     setToken(newToken);
-    fetchQuota();
+    fetchBalance();
   };
   // ... rest of state
   const [translatedImages, setTranslatedImages] = useState<TranslatedImage[]>([]);
@@ -105,6 +113,10 @@ function App() {
   // 开始翻译（异步轮询版本）
   const handleStartTranslation = useCallback(async () => {
     if (selectedFiles.length === 0) return;
+    if (!token) {
+      setErrorMessage("请先登录后再提交任务");
+      return;
+    }
 
     setStatus("uploading");
     setErrorMessage("");
@@ -133,8 +145,8 @@ function App() {
         timeout: 30000,
       });
 
-      // Update quota after submission
-      fetchQuota();
+      // Update balance after submission
+      fetchBalance();
 
       const taskId = submitResponse.data.task_id;
       console.log(`任务已提交: ${taskId}, 模式: ${targetMode}`);
@@ -194,7 +206,7 @@ function App() {
         setErrorMessage("提交任务失败，请检查网络连接或稍后重试");
       }
     }
-  }, [selectedFiles, targetMode]);
+  }, [selectedFiles, targetMode, token, fetchBalance]);
 
   // 下载单张图片
   const handleDownloadImage = useCallback((image: TranslatedImage) => {
@@ -224,6 +236,30 @@ function App() {
     (img) => img.status === "success"
   ).length;
 
+  const rechargePackages: RechargePackage[] = [
+    { id: "starter", name: "入门版", credits: 100, price: 0.09, description: "适合体验与轻量使用" },
+    { id: "pro", name: "专业版", credits: 500, price: 39.9, description: "高频翻译的稳定之选" },
+    { id: "enterprise", name: "企业版", credits: 2000, price: 129.9, description: "团队批量处理更划算" },
+  ];
+
+  const handlePurchase = async (packageId: string) => {
+    if (!token) return;
+    try {
+      const response = await axios.post<{ payment_url: string }>(
+        "/api/payments/create",
+        { package_id: packageId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      window.location.href = response.data.payment_url;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        setErrorMessage(error.response.data.detail || "充值创建失败");
+      } else {
+        setErrorMessage("充值创建失败，请稍后重试");
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 font-sans selection:bg-blue-100 selection:text-blue-900 overflow-x-hidden">
       {/* Blueprint Grid Background is handled in index.css body */}
@@ -232,6 +268,13 @@ function App() {
 
       <div className="relative max-w-5xl mx-auto px-6 py-12 z-10">
         {!token && <LoginModal onLoginSuccess={handleLoginSuccess} />}
+        {showRecharge && (
+          <RechargeModal
+            packages={rechargePackages}
+            onClose={() => setShowRecharge(false)}
+            onPurchase={handlePurchase}
+          />
+        )}
 
         {/* Technical Header */}
         <header className="mb-12 border-b border-slate-200 pb-8">
@@ -249,12 +292,12 @@ function App() {
               </p>
             </div>
 
-            {quota && (
+            {balance && (
               <div className="flex items-center gap-4 bg-white px-4 py-2 border border-slate-200 rounded-lg shadow-sm">
                 <div className="text-right">
-                  <div className="text-xs text-slate-400 font-medium uppercase tracking-wider">剩余额度</div>
+                  <div className="text-xs text-slate-400 font-medium uppercase tracking-wider">实时余额</div>
                   <div className="text-lg font-bold text-slate-900 font-mono">
-                    {quota.remaining} <span className="text-slate-400 text-sm font-normal">/ {quota.limit}</span>
+                    {balance.credits} <span className="text-slate-400 text-sm font-normal">积分</span>
                   </div>
                 </div>
                 <div className="w-10 h-10 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center">
@@ -262,6 +305,12 @@ function App() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
                 </div>
+                <button
+                  onClick={() => setShowRecharge(true)}
+                  className="ml-2 px-3 py-2 text-xs font-bold rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                >
+                  充值
+                </button>
               </div>
             )}
           </div>

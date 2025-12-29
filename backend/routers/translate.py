@@ -30,12 +30,11 @@ from services.task_manager import (
     delete_task_status,
     ensure_task_status_dir
 )
-from services.access_manager import access_manager
-# Avoid circular import by importing inside function or using string forward reference if needed, 
-# but routers usually can import each other if careful. 
-# Better: define get_token_header in a shared dependency file. 
-# For now, I'll import from routers.auth IF it doesn't cause circular import (routers.auth imports access_manager, translate imports access_manager. safe).
-from routers.auth import get_token_header
+from sqlmodel import Session
+
+from models.db_models import User
+from routers.auth import get_current_user
+from services.db import get_session
 
 # #region agent log
 # Debug logging helper
@@ -143,7 +142,8 @@ async def translate_bulk(
     background_tasks: BackgroundTasks,
     files: List[UploadFile] = File(..., description="要翻译的图片文件列表"),
     target_mode: str = Form("original", description="输出模式：original 或 ozon_3_4"),
-    token: str = Depends(get_token_header)
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
 ):
     """
     批量翻译图片接口
@@ -169,9 +169,12 @@ async def translate_bulk(
     
     logger.info(f"[{request_id}] 开始处理批量翻译请求，共 {len(files)} 个文件")
     
-    # 检查额度
-    if not access_manager.consume_quota(token, len(files)):
-         raise HTTPException(status_code=403, detail="额度不足 (Quota exceeded)")
+    # 检查并扣除积分
+    if user.credits < len(files):
+        raise HTTPException(status_code=403, detail="积分不足 (Insufficient credits)")
+    user.credits -= len(files)
+    session.add(user)
+    session.commit()
 
     try:
         # 2. 保存上传的文件到临时输入目录
@@ -479,7 +482,8 @@ async def translate_bulk_async(
     background_tasks: BackgroundTasks,
     files: List[UploadFile] = File(..., description="要翻译的图片文件列表"),
     target_mode: str = Form("original", description="输出模式"),
-    token: str = Depends(get_token_header)
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
 ):
     """
     批量翻译图片接口（异步版本）
@@ -500,9 +504,12 @@ async def translate_bulk_async(
     
     logger.info(f"[{task_id}] 接收异步翻译请求，共 {len(files)} 个文件")
 
-    # 检查额度
-    if not access_manager.consume_quota(token, len(files)):
-         raise HTTPException(status_code=403, detail="额度不足 (Quota exceeded)")
+    # 检查并扣除积分
+    if user.credits < len(files):
+        raise HTTPException(status_code=403, detail="积分不足 (Insufficient credits)")
+    user.credits -= len(files)
+    session.add(user)
+    session.commit()
     
     try:
         # 保存上传的文件
@@ -573,4 +580,3 @@ async def get_task_status(task_id: str):
         images=images,
         error=status.error
     )
-
