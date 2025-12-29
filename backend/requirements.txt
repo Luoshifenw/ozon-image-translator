@@ -21,6 +21,7 @@ sqlmodel==0.0.16
 SQLAlchemy==2.0.25
 
 # 认证与安全
+bcrypt==3.2.2
 passlib[bcrypt]==1.7.4
 python-jose[cryptography]==3.3.0
 
