@@ -45,6 +45,10 @@ def update_server():
             "sed -i 's/TRANSLATION_CONCURRENCY=5/TRANSLATION_CONCURRENCY=20/g' backend/.env && "
             "sed -i 's|BASE_URL=.*|BASE_URL=https://easy-reach.top|g' backend/.env || echo 'BASE_URL=https://easy-reach.top' >> backend/.env && "
             "sed -i 's|STORAGE_MODE=.*|STORAGE_MODE=cloud|g' backend/.env || echo 'STORAGE_MODE=cloud' >> backend/.env && "
+            "sed -i 's|ZPAY_PID=.*|ZPAY_PID=2025121822155819|g' backend/.env || echo 'ZPAY_PID=2025121822155819' >> backend/.env && "
+            "sed -i 's|ZPAY_KEY=.*|ZPAY_KEY=SVVD7eIggI8JwP9I6C3xKPwACRqYxmlu|g' backend/.env || echo 'ZPAY_KEY=SVVD7eIggI8JwP9I6C3xKPwACRqYxmlu' >> backend/.env && "
+            "sed -i 's|ZPAY_NOTIFY_URL=.*|ZPAY_NOTIFY_URL=https://easy-reach.top/api/payments/notify|g' backend/.env || echo 'ZPAY_NOTIFY_URL=https://easy-reach.top/api/payments/notify' >> backend/.env && "
+            "sed -i 's|ZPAY_RETURN_URL=.*|ZPAY_RETURN_URL=https://easy-reach.top/dashboard|g' backend/.env || echo 'ZPAY_RETURN_URL=https://easy-reach.top/dashboard' >> backend/.env && "
             
             # 清理旧容器
             "docker rm -f image-translator-backend || true && "
