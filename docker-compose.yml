@@ -13,7 +13,7 @@ services:
     restart: unless-stopped
     volumes:
       # 持久化数据库：使用命名卷避免部署时目录被清理
-      - db-data:/app/backend/data
+      - db-data:/app/data
       # 临时目录
       - ./temp:/app/temp
     ports:
