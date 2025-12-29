@@ -12,8 +12,8 @@ services:
     container_name: image-translator-backend
     restart: unless-stopped
     volumes:
-      # 持久化数据库：映射宿主机的 ./data 目录到容器的数据库目录
-      - ./data:/app/backend/data
+      # 持久化数据库：使用命名卷避免部署时目录被清理
+      - db-data:/app/backend/data
       # 临时目录
       - ./temp:/app/temp
     ports:
@@ -46,3 +46,6 @@ networks:
   default:
     name: image-translator-network
 
+volumes:
+  db-data:
+    name: image-translator-db-data
