@@ -69,6 +69,33 @@ function App() {
     }
   }, [token]);
 
+  // Handle ZPay Return URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tradeStatus = params.get("trade_status");
+    const outTradeNo = params.get("out_trade_no");
+
+    if (tradeStatus === "TRADE_SUCCESS" && outTradeNo) {
+      // Convert params to plain object for axios
+      const payload = Object.fromEntries(params.entries());
+
+      // Call notify endpoint from frontend context
+      axios.post("/api/payments/notify", payload, {
+        headers: { "Content-Type": "application/x-www-form-urlencoded" }
+      })
+        .then(() => {
+          // Success: Clear URL and refresh balance
+          window.history.replaceState({}, "", "/dashboard");
+          alert("充值成功！积分已到账。");
+          fetchBalance();
+        })
+        .catch((err) => {
+          console.error("Payment verification failed", err);
+          // Optional: alert("支付验证失败，请联系客服");
+        });
+    }
+  }, [fetchBalance]);
+
   const handleLoginSuccess = (newToken: string, _credits: number) => {
     setToken(newToken);
     fetchBalance();
