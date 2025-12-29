@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api/payments", tags=["Payments"])
 
 
 PAYMENT_PACKAGES = {
-    "starter": {"name": "入门版", "credits": 100, "amount": 0.09},
+    "starter": {"name": "入门版", "credits": 100, "amount": 9.9},
     "pro": {"name": "专业版", "credits": 500, "amount": 39.9},
     "enterprise": {"name": "企业版", "credits": 2000, "amount": 129.9},
 }
