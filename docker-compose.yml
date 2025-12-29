@@ -12,7 +12,9 @@ services:
     container_name: image-translator-backend
     restart: unless-stopped
     volumes:
-      # 挂载临时目录到宿主机（可选，用于调试）
+      # 持久化数据库：映射宿主机的 ./data 目录到容器的数据库目录
+      - ./data:/app/backend/data
+      # 临时目录
       - ./temp:/app/temp
     ports:
       - "8000:8000"

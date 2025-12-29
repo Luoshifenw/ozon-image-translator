@@ -25,7 +25,7 @@ def update_server():
             "git config --global --add safe.directory '*' && "
             "git fetch origin main && "
             "git reset --hard origin/main && "
-            "git clean -fd && "
+            "git clean -fd -e data && "
             
             # 停止服务以释放 80 端口（给 Certbot 用）
             "docker-compose down && "
