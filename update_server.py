@@ -50,14 +50,11 @@ def update_server():
             "sed -i 's|ZPAY_NOTIFY_URL=.*|ZPAY_NOTIFY_URL=https://easy-reach.top/api/payments/notify|g' backend/.env || echo 'ZPAY_NOTIFY_URL=https://easy-reach.top/api/payments/notify' >> backend/.env && "
             "sed -i 's|ZPAY_RETURN_URL=.*|ZPAY_RETURN_URL=https://easy-reach.top/dashboard|g' backend/.env || echo 'ZPAY_RETURN_URL=https://easy-reach.top/dashboard' >> backend/.env && "
             
-            # 清理旧容器
-            "docker rm -f image-translator-backend || true && "
-            "docker rm -f image-translator-frontend || true && "
+            # 清理旧容器 (down 会移除容器和网络)
+            "docker-compose down && "
             
-            # 重启服务
-            "docker-compose build backend && "
-            "docker-compose build frontend && "
-            "docker-compose up -d"
+            # 重建并启动服务
+            "docker-compose up -d --build"
         )
         
         print(f"Executing deployment sequence...")
