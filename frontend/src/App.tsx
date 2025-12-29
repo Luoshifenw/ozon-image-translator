@@ -4,6 +4,8 @@ import { UploadZone } from "./components/UploadZone";
 import { LoginModal } from "./components/LoginModal";
 import { RechargeModal } from "./components/RechargeModal";
 import type { RechargePackage } from "./components/RechargeModal";
+import { RechargeHistoryModal } from "./components/RechargeHistoryModal";
+import type { OrderRecord } from "./components/RechargeHistoryModal";
 import { FilePreviewGrid } from "./components/FilePreviewGrid";
 
 interface TranslatedImage {
@@ -36,6 +38,10 @@ function App() {
   const [token, setToken] = useState<string | null>(localStorage.getItem("auth_token"));
   const [balance, setBalance] = useState<BalanceInfo | null>(null);
   const [showRecharge, setShowRecharge] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [orders, setOrders] = useState<OrderRecord[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersError, setOrdersError] = useState("");
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [status, setStatus] = useState<Status>("idle");
@@ -66,8 +72,43 @@ function App() {
   useEffect(() => {
     if (!token) {
       setBalance(null);
+      setOrders([]);
     }
   }, [token]);
+
+  const handleLogout = useCallback(() => {
+    setToken(null);
+    setBalance(null);
+    setShowRecharge(false);
+    setShowHistory(false);
+    localStorage.removeItem("auth_token");
+  }, []);
+
+  const fetchOrders = useCallback(async () => {
+    if (!token) return;
+    setOrdersLoading(true);
+    setOrdersError("");
+    try {
+      const res = await axios.get<OrderRecord[]>("/api/payments/orders", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setOrders(res.data);
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        setOrdersError(error.response.data.detail || "加载充值记录失败");
+      } else {
+        setOrdersError("加载充值记录失败，请稍后重试");
+      }
+    } finally {
+      setOrdersLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (showHistory) {
+      fetchOrders();
+    }
+  }, [showHistory, fetchOrders]);
 
   // Handle ZPay Return URL
   useEffect(() => {
@@ -302,6 +343,15 @@ function App() {
             onPurchase={handlePurchase}
           />
         )}
+        {showHistory && (
+          <RechargeHistoryModal
+            orders={orders}
+            loading={ordersLoading}
+            error={ordersError}
+            onClose={() => setShowHistory(false)}
+            onRetry={fetchOrders}
+          />
+        )}
 
         {/* Technical Header */}
         <header className="mb-12 border-b border-slate-200 pb-8">
@@ -337,6 +387,18 @@ function App() {
                   className="ml-2 px-3 py-2 text-xs font-bold rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors"
                 >
                   充值
+                </button>
+                <button
+                  onClick={() => setShowHistory(true)}
+                  className="px-3 py-2 text-xs font-bold rounded-md border border-slate-200 text-slate-600 hover:text-slate-800 hover:border-slate-300 transition-colors"
+                >
+                  充值记录
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="px-3 py-2 text-xs font-bold rounded-md border border-slate-200 text-slate-500 hover:text-slate-700 hover:border-slate-300 transition-colors"
+                >
+                  登出
                 </button>
               </div>
             )}

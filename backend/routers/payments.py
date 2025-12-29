@@ -33,6 +33,15 @@ class CreateOrderResponse(BaseModel):
     payment_url: str
 
 
+class OrderRecord(BaseModel):
+    out_trade_no: str
+    amount: float
+    credits: int
+    status: str
+    created_at: datetime
+    paid_at: datetime | None
+
+
 def _build_sign(params: dict[str, str]) -> str:
     parts = []
     for key in sorted(params.keys()):
@@ -85,6 +94,29 @@ async def create_order(
 
     payment_url = f"{settings.ZPAY_GATEWAY}?{urlencode(params)}"
     return {"order_id": out_trade_no, "payment_url": payment_url}
+
+
+@router.get("/orders", response_model=list[OrderRecord])
+async def list_orders(
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    orders = session.exec(
+        select(Order)
+        .where(Order.user_id == user.id)
+        .order_by(Order.created_at.desc())
+    ).all()
+    return [
+        OrderRecord(
+            out_trade_no=order.out_trade_no,
+            amount=order.amount,
+            credits=order.credits,
+            status=order.status,
+            created_at=order.created_at,
+            paid_at=order.paid_at,
+        )
+        for order in orders
+    ]
 
 
 @router.post("/notify")
