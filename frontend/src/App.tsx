@@ -264,7 +264,7 @@ function App() {
   ).length;
 
   const rechargePackages: RechargePackage[] = [
-    { id: "starter", name: "入门版", credits: 100, price: 0.09, description: "适合体验与轻量使用" },
+    { id: "starter", name: "入门版", credits: 100, price: 9.9, description: "适合体验与轻量使用" },
     { id: "pro", name: "专业版", credits: 500, price: 39.9, description: "高频翻译的稳定之选" },
     { id: "enterprise", name: "企业版", credits: 2000, price: 129.9, description: "团队批量处理更划算" },
   ];
