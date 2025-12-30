@@ -49,7 +49,7 @@ def update_server():
             "sed -i 's|ZPAY_KEY=.*|ZPAY_KEY=SVVD7eIggI8JwP9I6C3xKPwACRqYxmlu|g' backend/.env || echo 'ZPAY_KEY=SVVD7eIggI8JwP9I6C3xKPwACRqYxmlu' >> backend/.env && "
             "sed -i 's|ZPAY_NOTIFY_URL=.*|ZPAY_NOTIFY_URL=https://easy-reach.top/api/payments/notify|g' backend/.env || echo 'ZPAY_NOTIFY_URL=https://easy-reach.top/api/payments/notify' >> backend/.env && "
             "sed -i 's|ZPAY_RETURN_URL=.*|ZPAY_RETURN_URL=https://easy-reach.top/dashboard|g' backend/.env || echo 'ZPAY_RETURN_URL=https://easy-reach.top/dashboard' >> backend/.env && "
-            "sed -i 's|ADMIN_EMAILS=.*|ADMIN_EMAILS=haoze8962@gmail.com|g' backend/.env || echo 'ADMIN_EMAILS=haoze8962@gmail.com' >> backend/.env && "
+            "sed -i 's|ADMIN_EMAILS=.*|ADMIN_EMAILS=luoshifenw@gmail.com|g' backend/.env || echo 'ADMIN_EMAILS=luoshifenw@gmail.com' >> backend/.env && "
             
             # 清理旧容器 (down 会移除容器和网络)
             "docker-compose down && "
