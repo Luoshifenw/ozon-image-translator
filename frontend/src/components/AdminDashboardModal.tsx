@@ -8,27 +8,22 @@ interface Metrics {
 
 interface AdminDashboardModalProps {
     onClose: () => void;
-    onLoad: (token: string) => Promise<Metrics>;
+    onLoad: () => Promise<Metrics>;
 }
 
 export function AdminDashboardModal({ onClose, onLoad }: AdminDashboardModalProps) {
-    const [token, setToken] = useState("");
     const [metrics, setMetrics] = useState<Metrics | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
     const handleLoad = async () => {
-        if (!token.trim()) {
-            setError("请输入管理员令牌");
-            return;
-        }
         setLoading(true);
         setError("");
         try {
-            const data = await onLoad(token.trim());
+            const data = await onLoad();
             setMetrics(data);
         } catch (err) {
-            setError("获取数据失败，请检查令牌");
+            setError("没有权限或加载失败");
         } finally {
             setLoading(false);
         }
@@ -46,17 +41,9 @@ export function AdminDashboardModal({ onClose, onLoad }: AdminDashboardModalProp
                 </button>
                 <div className="mb-6">
                     <h3 className="text-xl font-bold text-slate-900">数据看板</h3>
-                    <p className="text-sm text-slate-500 mt-1">输入管理员令牌查看核心指标</p>
+                    <p className="text-sm text-slate-500 mt-1">仅管理员账号可查看核心指标</p>
                 </div>
-
-                <div className="flex flex-col md:flex-row gap-3 mb-6">
-                    <input
-                        type="password"
-                        value={token}
-                        onChange={(e) => setToken(e.target.value)}
-                        placeholder="ADMIN_TOKEN"
-                        className="flex-1 px-4 py-3 rounded-md border border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-sm transition-all bg-slate-50 focus:bg-white"
-                    />
+                <div className="mb-6">
                     <button
                         onClick={handleLoad}
                         disabled={loading}

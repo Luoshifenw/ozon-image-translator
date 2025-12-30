@@ -45,6 +45,7 @@ function App() {
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState("");
   const [contactNotice, setContactNotice] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [status, setStatus] = useState<Status>("idle");
@@ -61,21 +62,36 @@ function App() {
       if (axios.isAxiosError(e) && (e.response?.status === 401 || e.response?.status === 403)) {
         setToken(null);
         setBalance(null);
+        setIsAdmin(false);
         localStorage.removeItem("auth_token");
       }
+    }
+  }, [token]);
+
+  const fetchMe = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await axios.get<{ is_admin: boolean }>("/api/auth/me", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setIsAdmin(res.data.is_admin);
+    } catch {
+      setIsAdmin(false);
     }
   }, [token]);
 
   useEffect(() => {
     if (!token) return;
     fetchBalance();
+    fetchMe();
     const interval = setInterval(fetchBalance, 30000);
     return () => clearInterval(interval);
-  }, [token, fetchBalance]);
+  }, [token, fetchBalance, fetchMe]);
   useEffect(() => {
     if (!token) {
       setBalance(null);
       setOrders([]);
+      setIsAdmin(false);
     }
   }, [token]);
 
@@ -85,6 +101,7 @@ function App() {
     setShowRecharge(false);
     setShowHistory(false);
     setShowAdmin(false);
+    setIsAdmin(false);
     localStorage.removeItem("auth_token");
   }, []);
 
@@ -114,13 +131,13 @@ function App() {
     }
   }, [showHistory, fetchOrders]);
 
-  const fetchAdminMetrics = useCallback(async (adminToken: string) => {
+  const fetchAdminMetrics = useCallback(async () => {
     const res = await axios.get<{ total_users: number; dau: number; paid_amount: number }>(
       "/api/admin/metrics",
-      { headers: { "X-Admin-Token": adminToken } }
+      { headers: { Authorization: `Bearer ${token}` } }
     );
     return res.data;
-  }, []);
+  }, [token]);
 
   // Handle ZPay Return URL
   useEffect(() => {
@@ -152,6 +169,7 @@ function App() {
   const handleLoginSuccess = (newToken: string, _credits: number) => {
     setToken(newToken);
     fetchBalance();
+    fetchMe();
   };
   // ... rest of state
   const [translatedImages, setTranslatedImages] = useState<TranslatedImage[]>([]);
@@ -375,7 +393,7 @@ function App() {
             onRetry={fetchOrders}
           />
         )}
-        {showAdmin && (
+        {showAdmin && isAdmin && (
           <AdminDashboardModal
             onClose={() => setShowAdmin(false)}
             onLoad={fetchAdminMetrics}
@@ -429,12 +447,14 @@ function App() {
                 >
                   登出
                 </button>
-                <button
-                  onClick={() => setShowAdmin(true)}
-                  className="px-3 py-2 text-xs font-bold rounded-md border border-slate-200 text-slate-400 hover:text-slate-600 hover:border-slate-300 transition-colors"
-                >
-                  数据看板
-                </button>
+                {isAdmin && (
+                  <button
+                    onClick={() => setShowAdmin(true)}
+                    className="px-3 py-2 text-xs font-bold rounded-md border border-slate-200 text-slate-400 hover:text-slate-600 hover:border-slate-300 transition-colors"
+                  >
+                    网站数据
+                  </button>
+                )}
               </div>
             )}
           </div>

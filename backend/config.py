@@ -67,6 +67,11 @@ class Settings:
 
     # 管理后台
     ADMIN_TOKEN: str = os.getenv("ADMIN_TOKEN", "")
+    ADMIN_EMAILS: list[str] = [
+        email.strip().lower()
+        for email in os.getenv("ADMIN_EMAILS", "").split(",")
+        if email.strip()
+    ]
 
 
 settings = Settings()

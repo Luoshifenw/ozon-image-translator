@@ -34,6 +34,12 @@ class TokenResponse(BaseModel):
 class BalanceResponse(BaseModel):
     credits: int
 
+
+class MeResponse(BaseModel):
+    email: EmailStr
+    credits: int
+    is_admin: bool
+
 async def get_token_header(authorization: Optional[str] = Header(None)):
     if not authorization:
         raise HTTPException(status_code=401, detail="Missing Authorization Header")
@@ -48,6 +54,10 @@ def _is_valid_invite_code(code: Optional[str]) -> bool:
     if not code:
         return False
     return code.strip() in settings.INVITE_CODES
+
+
+def _is_admin_email(email: str) -> bool:
+    return email.strip().lower() in settings.ADMIN_EMAILS
 
 
 def get_current_user(
@@ -124,3 +134,12 @@ async def login_user(
 @router.get("/quota", response_model=BalanceResponse)
 async def get_quota(user: User = Depends(get_current_user)):
     return {"credits": user.credits}
+
+
+@router.get("/me", response_model=MeResponse)
+async def get_me(user: User = Depends(get_current_user)):
+    return {
+        "email": user.email,
+        "credits": user.credits,
+        "is_admin": _is_admin_email(user.email),
+    }
