@@ -65,5 +65,8 @@ class Settings:
     ZPAY_TYPE: str = os.getenv("ZPAY_TYPE", "alipay")
     ZPAY_SITENAME: str = os.getenv("ZPAY_SITENAME", "")
 
+    # 管理后台
+    ADMIN_TOKEN: str = os.getenv("ADMIN_TOKEN", "")
+
 
 settings = Settings()

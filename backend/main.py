@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import translate, auth, payments
+from routers import translate, auth, payments, admin
 from services.file_handler import ensure_temp_root_exists
 from services.db import init_db
 
@@ -63,6 +63,7 @@ app.add_middleware(
 app.include_router(translate.router)
 app.include_router(auth.router)
 app.include_router(payments.router)
+app.include_router(admin.router)
 
 
 @app.get("/")

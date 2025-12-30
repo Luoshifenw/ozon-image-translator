@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Generator
 
 from sqlmodel import Session, SQLModel, create_engine
+from sqlalchemy import text
 
 from config import settings
 from models import db_models  # noqa: F401
@@ -19,8 +20,21 @@ engine = create_engine(
 )
 
 
+def _ensure_user_columns() -> None:
+    if not settings.DB_URL.startswith("sqlite"):
+        return
+    with engine.connect() as conn:
+        result = conn.execute(text("PRAGMA table_info(user)")).fetchall()
+        if not result:
+            return
+        columns = {row[1] for row in result}
+        if "last_active_at" not in columns:
+            conn.execute(text("ALTER TABLE user ADD COLUMN last_active_at DATETIME"))
+
+
 def init_db() -> None:
     SQLModel.metadata.create_all(engine)
+    _ensure_user_columns()
 
 
 def get_session() -> Generator[Session, None, None]:

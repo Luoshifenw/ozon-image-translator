@@ -2,6 +2,7 @@
 from fastapi import APIRouter, HTTPException, Header, Depends
 from pydantic import BaseModel, EmailStr
 from sqlmodel import Session, select
+from datetime import datetime
 from typing import Optional
 
 from config import settings
@@ -66,6 +67,9 @@ def get_current_user(
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
 
+    user.last_active_at = datetime.utcnow()
+    session.add(user)
+    session.commit()
     return user
 
 
@@ -83,6 +87,7 @@ async def register_user(
         email=request.email,
         hashed_password=hash_password(request.password),
         credits=credits,
+        last_active_at=datetime.utcnow(),
     )
     session.add(user)
     session.commit()
@@ -104,6 +109,10 @@ async def login_user(
     user = session.exec(select(User).where(User.email == request.email)).first()
     if not user or not verify_password(request.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    user.last_active_at = datetime.utcnow()
+    session.add(user)
+    session.commit()
 
     token = create_access_token({"sub": str(user.id)})
     return {

@@ -6,6 +6,7 @@ import { RechargeModal } from "./components/RechargeModal";
 import type { RechargePackage } from "./components/RechargeModal";
 import { RechargeHistoryModal } from "./components/RechargeHistoryModal";
 import type { OrderRecord } from "./components/RechargeHistoryModal";
+import { AdminDashboardModal } from "./components/AdminDashboardModal";
 import { FilePreviewGrid } from "./components/FilePreviewGrid";
 
 interface TranslatedImage {
@@ -39,9 +40,11 @@ function App() {
   const [balance, setBalance] = useState<BalanceInfo | null>(null);
   const [showRecharge, setShowRecharge] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false);
   const [orders, setOrders] = useState<OrderRecord[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState("");
+  const [contactNotice, setContactNotice] = useState("");
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [status, setStatus] = useState<Status>("idle");
@@ -81,6 +84,7 @@ function App() {
     setBalance(null);
     setShowRecharge(false);
     setShowHistory(false);
+    setShowAdmin(false);
     localStorage.removeItem("auth_token");
   }, []);
 
@@ -109,6 +113,14 @@ function App() {
       fetchOrders();
     }
   }, [showHistory, fetchOrders]);
+
+  const fetchAdminMetrics = useCallback(async (adminToken: string) => {
+    const res = await axios.get<{ total_users: number; dau: number; paid_amount: number }>(
+      "/api/admin/metrics",
+      { headers: { "X-Admin-Token": adminToken } }
+    );
+    return res.data;
+  }, []);
 
   // Handle ZPay Return URL
   useEffect(() => {
@@ -296,6 +308,17 @@ function App() {
       });
   }, [translatedImages, handleDownloadImage]);
 
+  const handleCopyEmail = useCallback(async () => {
+    const email = "haoze8962@gmail.com";
+    try {
+      await navigator.clipboard.writeText(email);
+      setContactNotice("邮箱已复制");
+      setTimeout(() => setContactNotice(""), 2000);
+    } catch {
+      setContactNotice("复制失败，请手动复制");
+    }
+  }, []);
+
   // Status logic handled inline now or via simple helpers if needed
 
   const isProcessing = status === "uploading" || status === "processing";
@@ -352,6 +375,12 @@ function App() {
             onRetry={fetchOrders}
           />
         )}
+        {showAdmin && (
+          <AdminDashboardModal
+            onClose={() => setShowAdmin(false)}
+            onLoad={fetchAdminMetrics}
+          />
+        )}
 
         {/* Technical Header */}
         <header className="mb-12 border-b border-slate-200 pb-8">
@@ -399,6 +428,12 @@ function App() {
                   className="px-3 py-2 text-xs font-bold rounded-md border border-slate-200 text-slate-500 hover:text-slate-700 hover:border-slate-300 transition-colors"
                 >
                   登出
+                </button>
+                <button
+                  onClick={() => setShowAdmin(true)}
+                  className="px-3 py-2 text-xs font-bold rounded-md border border-slate-200 text-slate-400 hover:text-slate-600 hover:border-slate-300 transition-colors"
+                >
+                  数据看板
                 </button>
               </div>
             )}
@@ -612,6 +647,32 @@ function App() {
           </div>
         )}
       </div>
+
+      <footer className="mt-12 border-t border-slate-200 bg-white/70">
+        <div className="max-w-5xl mx-auto px-6 py-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">联系我们</div>
+            <div className="text-sm font-bold text-slate-800">haoze8962@gmail.com</div>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleCopyEmail}
+              className="px-4 py-2 text-xs font-bold rounded-md border border-slate-200 text-slate-600 hover:text-slate-800 hover:border-slate-300 transition-colors"
+            >
+              复制邮箱
+            </button>
+            <a
+              href="mailto:haoze8962@gmail.com"
+              className="px-4 py-2 text-xs font-bold rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+            >
+              发送邮件
+            </a>
+            {contactNotice && (
+              <span className="text-xs text-slate-400">{contactNotice}</span>
+            )}
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
